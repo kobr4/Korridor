@@ -78,6 +78,7 @@
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureGenerator.cpp" />
+    <ClCompile Include="UIWidget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BufferData.h" />
@@ -92,6 +93,7 @@
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureGenerator.h" />
+    <ClInclude Include="UIWidget.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

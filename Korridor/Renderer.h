@@ -31,6 +31,7 @@ class Game;
 class Sprite;
 class FrameBuffer;
 class Shader;
+class UIWidget;
 
 enum RendererTextAlign
 {
@@ -65,10 +66,13 @@ public :
 
 	void drawMessage(const char * message,RendererTextAlign hAlign,RendererTextAlign vAlign);
 	void drawMessage(const char * message,float x,float y);
+	unsigned int getScreenWidth() {return screenWidth;};
+	unsigned int getScreenHeight() {return screenHeight;};
 private :
 	unsigned int screenHeight;
 	unsigned int screenWidth;
 	unsigned int frameCounter;
+	UIWidget * headWidget;
 	FrameBuffer * fbDrawing;
 	Sprite * spriteDrawing;
 	Shader * shaderTexturing;

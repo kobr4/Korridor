@@ -43,6 +43,7 @@
 #include "OutputConsole.h"
 #include "TextureGenerator.h"
 
+#include "UIWidget.h"
 
 //#define OVR
 #define OVR_OS_WIN32
@@ -311,7 +312,13 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
 
    /* disable the retarded "health and safety warning" */
   //ovrhmd_EnableHSWDisplaySDKRender(hmd, 0);
-
+	headWidget = new UIHeader();
+	UIHeader * header1 = new UIHeader();
+	header1->setLabel("hello");
+	headWidget->addChild(header1);
+	UIHeader * header2 = new UIHeader();
+	header2->setLabel("world");
+	headWidget->addChild(header2);
 }
 
 
@@ -555,6 +562,8 @@ void Renderer::draw()
 	this->drawMessage(s,RendererTextAlign::ALIGNRIGHT,RendererTextAlign::ALIGNBOTTOM);
 	this->drawMessage("TOPLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
 	this->drawMessage("BOTTOMLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);
+
+	this->headWidget->drawChilds(this);
 
 	this->drawFps();
 	OutputConsole::render();
