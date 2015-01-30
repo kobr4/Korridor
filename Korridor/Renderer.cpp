@@ -314,10 +314,10 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
   //ovrhmd_EnableHSWDisplaySDKRender(hmd, 0);
 	headWidget = new UIHeader();
 	UIHeader * header1 = new UIHeader();
-	header1->setLabel("hello");
+	header1->setLabel("Option");
 	headWidget->addChild(header1);
 	UIHeader * header2 = new UIHeader();
-	header2->setLabel("world");
+	header2->setLabel("Quit");
 	headWidget->addChild(header2);
 }
 
@@ -563,7 +563,9 @@ void Renderer::draw()
 	this->drawMessage("TOPLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
 	this->drawMessage("BOTTOMLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);
 
-	this->headWidget->drawChilds(this);
+	if (this->headWidget->isActive()){
+		this->headWidget->drawChilds(this);
+	}
 
 	this->drawFps();
 	OutputConsole::render();
@@ -626,83 +628,87 @@ void Renderer::loop()
 
 		while( SDL_PollEvent( &event ) )
 		{
-			switch( event.type )
-			{
-				case SDL_KEYDOWN:
-					switch( event.key.keysym.sym )
-					{
-						case SDLK_SPACE :
-							asyncspace = 1;
-							break;
-						case SDLK_UP:
-							asyncup = 1;
-							camera->Move(CameraDirection::FORWARD);
-							break;
-						case SDLK_DOWN:
-							asyncdown = 1;
-							camera->Move(CameraDirection::BACK);
-							break;
-						case SDLK_LEFT:
-							asynleft = 1;
-							camera->Move(CameraDirection::LEFT);
-							break;
-						case SDLK_RIGHT:
-							asynright = 1;
-							camera->Move(CameraDirection::RIGHT);
-							break;
-						case SDLK_ESCAPE:
-							bExit = true;
-							break;
+			if (this->headWidget->isActive()) {
+				this->headWidget->handleEvent(event);
+			} else {
+				switch( event.type )
+				{
+					case SDL_KEYDOWN:
+						switch( event.key.keysym.sym )
+						{
+							case SDLK_SPACE :
+								asyncspace = 1;
+								break;
+							case SDLK_UP:
+								asyncup = 1;
+								camera->Move(CameraDirection::FORWARD);
+								break;
+							case SDLK_DOWN:
+								asyncdown = 1;
+								camera->Move(CameraDirection::BACK);
+								break;
+							case SDLK_LEFT:
+								asynleft = 1;
+								camera->Move(CameraDirection::LEFT);
+								break;
+							case SDLK_RIGHT:
+								asynright = 1;
+								camera->Move(CameraDirection::RIGHT);
+								break;
+							case SDLK_ESCAPE:
+								bExit = true;
+								break;
 
-						default:
-							break;
-					}
-				break;
-				case SDL_KEYUP:
-					switch( event.key.keysym.sym )
-					{
-						case SDLK_SPACE :
-							asyncspace = 0;
-							break;
-						case SDLK_UP:
-							asyncup = 0;
-							break;
-						case SDLK_DOWN:
-							asyncdown = 0;
-							break;
-						case SDLK_LEFT:
-							asynleft = 0;
-							break;
-						case SDLK_RIGHT:
-							asynright = 0;
-							break;
-						case SDLK_ESCAPE:
-							bExit = true;
-							break;
-						case SDLK_7 :
-							effect.duration = 30;
-							effect.effectType = 3;
-							addEffect(effect);			
-							break;
-						case SDLK_9 :
-							effect.duration = 30;
-							effect.effectType = 2;
-							addEffect(effect);			
-							break;
-						case SDLK_0 :
-							effect.duration = 30;
-							effect.effectType = 1;
-							addEffect(effect);
-							break;
-						default:
-							break;
-					}
-				break;
-				case SDL_MOUSEMOTION:
-					camera->Move2D(event.motion.x,event.motion.y);
+							default:
+								break;
+						}
 					break;
-			}
+					case SDL_KEYUP:
+						switch( event.key.keysym.sym )
+						{
+							case SDLK_SPACE :
+								asyncspace = 0;
+								break;
+							case SDLK_UP:
+								asyncup = 0;
+								break;
+							case SDLK_DOWN:
+								asyncdown = 0;
+								break;
+							case SDLK_LEFT:
+								asynleft = 0;
+								break;
+							case SDLK_RIGHT:
+								asynright = 0;
+								break;
+							case SDLK_ESCAPE:
+								//bExit = true;
+								break;
+							case SDLK_7 :
+								effect.duration = 30;
+								effect.effectType = 3;
+								addEffect(effect);			
+								break;
+							case SDLK_9 :
+								effect.duration = 30;
+								effect.effectType = 2;
+								addEffect(effect);			
+								break;
+							case SDLK_0 :
+								effect.duration = 30;
+								effect.effectType = 1;
+								addEffect(effect);
+								break;
+							default:
+								break;
+						}
+					break;
+					case SDL_MOUSEMOTION:
+						camera->Move2D(event.motion.x,event.motion.y);
+						break;
+				}
                     
+			}
 		}
 		
 

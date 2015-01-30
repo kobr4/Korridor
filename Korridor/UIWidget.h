@@ -8,11 +8,22 @@ class Renderer;
 class UIWidget {
 	static unsigned int elementSize;
 protected :
+	bool selected;
+	bool active;
 	std::vector<UIWidget *> childs;
 public :
+	UIWidget() {
+		selected = false;
+		active = true;
+	}
 	virtual void addChild(UIWidget * widget);
 	void drawChilds(Renderer * renderer);
+	void setSelected(bool b);
+	bool isSelected();
+	void setActive(bool b);
+	bool isActive();
 	virtual void draw(Renderer * renderer,Uint32 x,Uint32 y) = 0;
+	virtual void handleEvent(SDL_Event event);
 };
 
 class UIHeader : public UIWidget {
