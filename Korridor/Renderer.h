@@ -68,11 +68,13 @@ public :
 	void drawMessage(const char * message,float x,float y);
 	unsigned int getScreenWidth() {return screenWidth;};
 	unsigned int getScreenHeight() {return screenHeight;};
+
+	void setExitState();
 private :
 	unsigned int screenHeight;
 	unsigned int screenWidth;
 	unsigned int frameCounter;
-	UIWidget * headWidget;
+	//UIWidget * headWidget;
 	FrameBuffer * fbDrawing;
 	Sprite * spriteDrawing;
 	Shader * shaderTexturing;

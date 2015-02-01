@@ -91,6 +91,21 @@ static union ovrGLConfig glcfg;
 static unsigned int distort_caps;
 static unsigned int hmd_caps;
 
+void func_exit_cb(void * data) {
+	Renderer * renderer = (Renderer*)data;
+	renderer->setExitState();
+
+}
+
+void func_back_cb(void * data) {
+	UIWidget * widget = (UIWidget *)data;
+	if (widget->getParent() != NULL && widget->getParent()->getParent() != NULL) {
+		UIWidget::currentWidget = widget->getParent()->getParent();
+			puts("kikoo !");
+	}
+
+}
+
 void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
 {
 	/* libovr must be initialized before we create the OpenGL context */
@@ -193,7 +208,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
 	g_shader_debug->load_vertex("vertex.gl");
 
 	
-	for (int i = 0;i < spaceCount;i++) {
+	for (unsigned int i = 0;i < spaceCount;i++) {
 		Renderable * renderable = Renderable::createRenderable(g_shader_debug, spaceObjectArray[i].texture, spaceObjectArray[i].triangleArray, spaceObjectArray[i].triangleCount);
 		renderable->setSecondaryTexture(spaceObjectArray[i].lightMapTexture);
 		g_renderableList.push_back(renderable);
@@ -248,9 +263,9 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
     		fb_ovr_tex[i].OGL.Header.TextureSize.w = screenWidth;
     		fb_ovr_tex[i].OGL.Header.TextureSize.h = screenHeight;
     		/* this next field is the only one that differs between the two eyes */
-			fb_ovr_tex[i].OGL.Header.RenderViewport.Pos.x = i == 0 ? 0 : screenWidth / 2.0;
+			fb_ovr_tex[i].OGL.Header.RenderViewport.Pos.x = i == 0 ? 0 : screenWidth / 2;
     		fb_ovr_tex[i].OGL.Header.RenderViewport.Pos.y = 0;
-    		fb_ovr_tex[i].OGL.Header.RenderViewport.Size.w = screenWidth / 2.0;
+    		fb_ovr_tex[i].OGL.Header.RenderViewport.Size.w = screenWidth / 2;
     		fb_ovr_tex[i].OGL.Header.RenderViewport.Size.h = screenHeight;
     		fb_ovr_tex[i].OGL.TexId = fb_tex;	/* both eyes will use the same texture id */
     	}
@@ -312,19 +327,42 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
 
    /* disable the retarded "health and safety warning" */
   //ovrhmd_EnableHSWDisplaySDKRender(hmd, 0);
-	headWidget = new UIHeader();
+	UIHeader * headWidget = new UIHeader();
 	UIHeader * header1 = new UIHeader();
 	header1->setLabel("Option");
+	{
+		UIHeader * headerOption1 = new UIHeader();
+		headerOption1->setLabel("Option 1");
+		header1->addChild(headerOption1);
+
+		UIBoolean * headerBoolean = new UIBoolean();
+		headerBoolean->setLabel("Boolean");
+		header1->addChild(headerBoolean);
+
+		UIHeader * headerOptionBack = new UIHeader();
+		headerOptionBack->setLabel("Back");
+		headerOptionBack->setOnClickCallback(&func_back_cb,headerOptionBack);
+		header1->addChild(headerOptionBack);
+	}
+
+
 	headWidget->addChild(header1);
 	UIHeader * header2 = new UIHeader();
 	header2->setLabel("Quit");
+	header2->setOnClickCallback(&func_exit_cb,this);
 	headWidget->addChild(header2);
+
+	UIWidget::currentWidget = headWidget;
 }
 
 
 bool Renderer::exitstate()
 {
 	return bExit; 
+}
+
+void Renderer::setExitState() {
+	bExit = true;
 }
 
 int thread_func(void *data)
@@ -368,8 +406,8 @@ void Renderer::drawMessage(const char * message,float x,float y) {
 
 void Renderer::drawMessage(SDL_Surface * textSur,float x,float y) {
 	SDL_Rect rect;
-	rect.x = x;
-	rect.y = y;
+	rect.x = (int)x;
+	rect.y = (int)y;
 	SDL_BlitSurface(textSur,NULL,this->textSurface,&rect);
 }
 
@@ -393,26 +431,26 @@ void Renderer::drawMessage(const char * message,RendererTextAlign hAlign,Rendere
 	switch (hAlign)
 	{
 	case ALIGNLEFT:
-		rect.x = (this->textSurface->w - this->textSurface->w* hudScale );
+		rect.x = (int)(this->textSurface->w - this->textSurface->w* hudScale );
 		break;
 	case ALIGNRIGHT:
-		rect.x = (this->textSurface->w * hudScale - textSur->w) ;
+		rect.x = (int)(this->textSurface->w * hudScale - textSur->w) ;
 		break;
 	case ALIGNCENTER:
-		rect.x = (this->textSurface->w - textSur->w)/2;
+		rect.x = (int)(this->textSurface->w - textSur->w)/2;
 		break;
 	}
 
 	switch (vAlign)
 	{
 	case ALIGNTOP:
-		rect.y = (this->textSurface->h - this->textSurface->h* hudScale );
+		rect.y = (int)(this->textSurface->h - this->textSurface->h* hudScale );
 		break;
 	case ALIGNBOTTOM:
-		rect.y = (this->textSurface->h * hudScale - textSur->h) ;
+		rect.y = (int)(this->textSurface->h * hudScale - textSur->h) ;
 		break;
 	case ALIGNCENTER:
-		rect.y = (this->textSurface->h - textSur->h)/2;
+		rect.y = (int)(this->textSurface->h - textSur->h)/2;
 		break;
 	}
 
@@ -454,9 +492,11 @@ void Renderer::draw()
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
-	ovrPosef headPose[2];
+
 
 	#ifdef OVR
+	ovrPosef headPose[2];
+
 	// Query the HMD for the current tracking state.
 	ovrTrackingState ts = ovrHmd_GetTrackingState(hmd, ovr_GetTimeInSeconds());
 	if (ts.StatusFlags & (ovrStatus_OrientationTracked | ovrStatus_PositionTracked))
@@ -540,7 +580,7 @@ void Renderer::draw()
 	g_shader_debug->bind_attributes();
 
 
-	for (int i = 0;i < g_renderableList.size();i++) {
+	for (unsigned int i = 0;i < g_renderableList.size();i++) {
 		g_renderableList[i]->draw();
 	}
 	
@@ -563,8 +603,8 @@ void Renderer::draw()
 	this->drawMessage("TOPLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
 	this->drawMessage("BOTTOMLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);
 
-	if (this->headWidget->isActive()){
-		this->headWidget->drawChilds(this);
+	if (UIWidget::currentWidget->isActive()){
+		UIWidget::currentWidget->drawChilds(this);
 	}
 
 	this->drawFps();
@@ -628,8 +668,8 @@ void Renderer::loop()
 
 		while( SDL_PollEvent( &event ) )
 		{
-			if (this->headWidget->isActive()) {
-				this->headWidget->handleEvent(event);
+			if (UIWidget::currentWidget->isActive()) {
+				UIWidget::currentWidget->handleEvent(event);
 			} else {
 				switch( event.type )
 				{
@@ -656,7 +696,8 @@ void Renderer::loop()
 								camera->Move(CameraDirection::RIGHT);
 								break;
 							case SDLK_ESCAPE:
-								bExit = true;
+								//bExit = true;
+								UIWidget::currentWidget->setActive(true);
 								break;
 
 							default:
@@ -683,6 +724,8 @@ void Renderer::loop()
 								break;
 							case SDLK_ESCAPE:
 								//bExit = true;
+					
+								
 								break;
 							case SDLK_7 :
 								effect.duration = 30;
