@@ -42,7 +42,7 @@ class Camera {
 		//Given a specific moving direction, the camera will be moved in the appropriate direction
 		//For a spherical camera this will be around the look_at point
 		//For a free camera a delta will be computed for the direction of movement.
-		void Move(CameraDirection dir);
+		void Move(CameraDirection dir, float factor = 1.0f);
 		//Change the pitch (up, down) for the free camera
 		void ChangePitch(float degrees);
 		//Change heading (left, right) for the free camera
@@ -50,6 +50,8 @@ class Camera {
 
 		//Change the heading and pitch of the camera based on the 2d movement of the mouse
 		void Move2D(int x, int y);
+
+		void Move2DJoy(int x, int y);
 
 		//Change heading and pitch based on Oculus Rift tracking
 		void MoveOvr(float pitch, float yaw, float roll);

@@ -94,26 +94,26 @@ void Camera::SetClipping(double near_clip_distance, double far_clip_distance) {
 	far_clip = far_clip_distance;
 }
 
-void Camera::Move(CameraDirection dir) {
+void Camera::Move(CameraDirection dir, float factor) {
 	if (camera_mode == FREE) {
 		switch (dir) {
 			case UP:
-				camera_position_delta += camera_up * camera_scale;
+				camera_position_delta += camera_up * camera_scale * factor;
 				break;
 			case DOWN:
-				camera_position_delta -= camera_up * camera_scale;
+				camera_position_delta -= camera_up * camera_scale * factor;
 				break;
 			case LEFT:
-				camera_position_delta -= glm::cross(camera_direction, camera_up) * camera_scale;
+				camera_position_delta -= glm::cross(camera_direction, camera_up) * camera_scale * factor;
 				break;
 			case RIGHT:
-				camera_position_delta += glm::cross(camera_direction, camera_up) * camera_scale;
+				camera_position_delta += glm::cross(camera_direction, camera_up) * camera_scale * factor;
 				break;
 			case FORWARD:
-				camera_position_delta += camera_direction * camera_scale;
+				camera_position_delta += camera_direction * camera_scale * factor;
 				break;
 			case BACK:
-				camera_position_delta -= camera_direction * camera_scale;
+				camera_position_delta -= camera_direction * camera_scale * factor;
 				break;
 		}
 	}
@@ -164,6 +164,15 @@ void Camera::Move2D(int x, int y) {
 		ChangeHeading(.16f * mouse_delta.x);
 		ChangePitch(.16f * mouse_delta.y);
 	//}
+	mouse_position = glm::vec3(x, y, 0);
+}
+
+void Camera::Move2DJoy(int x, int y) {
+	glm::vec3 mouse_delta = -glm::vec3(x, y, 0);
+
+	ChangeHeading(.16f * mouse_delta.x);
+	ChangePitch(.16f * mouse_delta.y);
+	
 	mouse_position = glm::vec3(x, y, 0);
 }
 

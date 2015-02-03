@@ -91,6 +91,8 @@ static union ovrGLConfig glcfg;
 static unsigned int distort_caps;
 static unsigned int hmd_caps;
 
+SDL_Joystick * g_joystick = NULL; // on crée le joystick
+
 void func_exit_cb(void * data) {
 	Renderer * renderer = (Renderer*)data;
 	renderer->setExitState();
@@ -118,10 +120,13 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
 		effectList[i].duration = 0;
 	}
 
-	if ( SDL_Init(SDL_INIT_AUDIO|SDL_INIT_VIDEO) < 0 ) {
+	if ( SDL_Init(SDL_INIT_AUDIO|SDL_INIT_VIDEO| SDL_INIT_JOYSTICK) < 0 ) {
 		fprintf(stderr, "Impossible d'initialiser SDL: %s\n", SDL_GetError());
 		exit(1);
 	}
+
+
+    g_joystick = SDL_JoystickOpen(0);
 
     atexit(SDL_Quit);
 
@@ -650,11 +655,12 @@ void Renderer::loop()
 	T_EFFECT effect;
 	int told = SDL_GetTicks();
 
-		int asyncup = 0;
-		int asyncdown = 0;
-		int asynleft = 0;
-		int asynright = 0;
-		int asyncspace = 0;
+
+	int xjaxis = 0;
+	int yjaxis = 0;
+	int zjaxis = 0;
+	int wjaxis = 0;
+	int deadzone = 400;
 
 	while (!bExit)
 	{
@@ -665,6 +671,23 @@ void Renderer::loop()
 
 		if (dt != 0)
 			this->fps = 1000/dt;
+
+		if (xjaxis < -deadzone) {
+			camera->Move(CameraDirection::LEFT, -(float)(xjaxis)/32768.f);
+		} else if (xjaxis > deadzone){
+			camera->Move(CameraDirection::RIGHT, (float)(xjaxis)/32768.f);
+		}
+
+		if (yjaxis < -deadzone) {
+			camera->Move(CameraDirection::FORWARD, -(float)(yjaxis)/32768.f);
+		} else if (yjaxis > deadzone){
+			camera->Move(CameraDirection::BACK, (float)(yjaxis)/32768.f);
+		}
+
+
+		if (zjaxis != 0 && wjaxis != 0) {
+			camera->Move2DJoy(zjaxis/500,wjaxis/500);
+		}
 
 		while( SDL_PollEvent( &event ) )
 		{
@@ -677,22 +700,17 @@ void Renderer::loop()
 						switch( event.key.keysym.sym )
 						{
 							case SDLK_SPACE :
-								asyncspace = 1;
 								break;
 							case SDLK_UP:
-								asyncup = 1;
 								camera->Move(CameraDirection::FORWARD);
 								break;
 							case SDLK_DOWN:
-								asyncdown = 1;
 								camera->Move(CameraDirection::BACK);
 								break;
 							case SDLK_LEFT:
-								asynleft = 1;
 								camera->Move(CameraDirection::LEFT);
 								break;
 							case SDLK_RIGHT:
-								asynright = 1;
 								camera->Move(CameraDirection::RIGHT);
 								break;
 							case SDLK_ESCAPE:
@@ -708,19 +726,14 @@ void Renderer::loop()
 						switch( event.key.keysym.sym )
 						{
 							case SDLK_SPACE :
-								asyncspace = 0;
 								break;
 							case SDLK_UP:
-								asyncup = 0;
 								break;
 							case SDLK_DOWN:
-								asyncdown = 0;
 								break;
 							case SDLK_LEFT:
-								asynleft = 0;
 								break;
 							case SDLK_RIGHT:
-								asynright = 0;
 								break;
 							case SDLK_ESCAPE:
 								//bExit = true;
@@ -749,43 +762,41 @@ void Renderer::loop()
 					case SDL_MOUSEMOTION:
 						camera->Move2D(event.motion.x,event.motion.y);
 						break;
-				}
-                    
+					case SDL_JOYAXISMOTION:
+						if (event.jaxis.axis == 0) {
+							xjaxis = event.jaxis.value / 10;
+						}
+
+						if (event.jaxis.axis == 1) {
+							yjaxis = event.jaxis.value / 10;
+						}
+
+						if (event.jaxis.axis == 2) {
+							zjaxis = event.jaxis.value / 10;
+						}
+
+						if (event.jaxis.axis == 3) {
+							wjaxis = event.jaxis.value / 10;
+						}
+						break;
+				}                
 			}
 		}
 		
-
-		if (asyncup)
-		{
-
-		}
-
-		if (asyncdown)
-		{	
-		}
-
-		if (asynleft)
-		{
-		}
-
-		if (asynright)
-		{
-		}
-
-		if (asyncspace)
-		{
-		}
-
-
 		this->draw();
 
 		SDL_Delay(10);
 	}
 
     
+
 	SDL_GL_DeleteContext(contexteOpenGL);
     SDL_DestroyWindow(displayWindow);
-    SDL_Quit();
+    
+	if (g_joystick != NULL) {
+		SDL_JoystickClose(g_joystick);
+	}
+	SDL_Quit();
 }
 
 int Renderer::getFps()
