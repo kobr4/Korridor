@@ -11,6 +11,28 @@ typedef struct {
 	float p3[3];
 	float p4[3];
 } T_TextureQuad;
+typedef enum {
+	TOP,
+	BOTTOM,
+	VERTICAL
+} T_POSITION;
+
+typedef enum {
+	ENABLED,
+	DISABLED
+} T_STATE;
+
+typedef struct {
+	float p1[3];
+	float p2[3];
+	float p3[3];
+	float p4[3];
+	float pos_x;
+	float pos_y;
+	T_POSITION position;
+	T_STATE state;
+} T_QUAD;
+
 
 class Texture;
 class TextureGenerator {
@@ -19,5 +41,6 @@ public :
 		unsigned int border,unsigned char r, unsigned char g, unsigned char b,unsigned char jr, unsigned char jg, unsigned char jb);
 	static Texture * generateWhiteTexture();
 	static Texture * generateLightmapTexture(unsigned int width,unsigned int height,T_TextureLightSource * source, T_TextureQuad * quad);
+	static Texture * generateLightmapTextureWithOcclusion(unsigned int width,unsigned int height,T_TextureLightSource * source, T_TextureQuad * quad,T_QUAD * quadOccluded, unsigned int quadArraySize,unsigned int quadToIgnore);
 	static void writeTGA(char * filename, unsigned char * map, int width, int height, bool invertRB);
 };

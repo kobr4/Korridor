@@ -5,27 +5,6 @@
 #include "Texture.h"
 #include "TextureGenerator.h"
 
-typedef enum {
-	TOP,
-	BOTTOM,
-	VERTICAL
-} T_POSITION;
-
-typedef enum {
-	ENABLED,
-	DISABLED
-} T_STATE;
-
-typedef struct {
-	float p1[3];
-	float p2[3];
-	float p3[3];
-	float p4[3];
-	float pos_x;
-	float pos_y;
-	T_POSITION position;
-	T_STATE state;
-} T_QUAD;
 
 
 
@@ -303,9 +282,9 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 	lightSource.color[1] = 1.0f;
 	lightSource.color[2] = 1.0f;
 
-	lightSource.position[0] = 23.0f;
-	lightSource.position[1] = 6.5f;
-	lightSource.position[2] = 49.1f;
+	lightSource.position[0] = 22.0f;
+	lightSource.position[1] = 4.0f;
+	lightSource.position[2] = 61.0f;
 
 	for (unsigned int i = 0;i < quadArrayCount;i++){ 
 		if (quadArray[i].state == ENABLED) {
@@ -364,7 +343,8 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 				currentQuad.p3[z] = quadArray[i].p3[z];
 				currentQuad.p4[z] = quadArray[i].p4[z];
 			}
-			Texture * element_lightmap = TextureGenerator::generateLightmapTexture(256,256,&lightSource,&currentQuad);
+			//Texture * element_lightmap = TextureGenerator::generateLightmapTexture(256,256,&lightSource,&currentQuad);
+			Texture * element_lightmap = TextureGenerator::generateLightmapTextureWithOcclusion(256,256,&lightSource,&currentQuad,quadArray,quadArrayCount,i);
 			lightmap_texture->packTexture(element_lightmap,1024 / nbTexturePerLine * (quadCounter % nbTexturePerLine),1024 / nbTexturePerLine * (quadCounter / nbTexturePerLine));
 
 			quadCounter++;

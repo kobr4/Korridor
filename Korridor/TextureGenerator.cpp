@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <glm\glm.hpp>
+#include <glm\gtx\intersect.hpp>
 
 Texture * g_white_texture = NULL;
 Texture * TextureGenerator::generateTileTexture(unsigned int width,unsigned int height, unsigned int hoffset,unsigned int hspacing,unsigned int vspacing,unsigned int border
@@ -76,7 +77,11 @@ Texture * TextureGenerator::generateLightmapTexture(unsigned int width,unsigned 
 			glm::vec3 lightdir = light_position - current;
 			normal = glm::normalize(normal);
 			lightdir = glm::normalize(lightdir);
-			float dot = glm::dot(normal,lightdir);
+
+			float attenuation = 1.0f / glm::distance(current, light_position) * 10.0f;
+
+			float dot = glm::dot(normal,lightdir) * attenuation;
+			
 			if (dot > 0.0f) {
 				texture_data[(i*width+j)*4 + 0] = (dot * source->color[0]*255 + 30) > 255 ? 255 : dot * source->color[0]*255 + 30;
 				texture_data[(i*width+j)*4 + 1] = (dot * source->color[1]*255 + 30) > 255 ? 255 : dot * source->color[1]*255 + 30;
@@ -90,9 +95,102 @@ Texture * TextureGenerator::generateLightmapTexture(unsigned int width,unsigned 
 			}
 		}
 	}
-
+	puts("kikoo");
 	return new Texture(width,height,(unsigned char*)texture_data);
 }
+
+Texture * TextureGenerator::generateLightmapTextureWithOcclusion(unsigned int width,unsigned int height,T_TextureLightSource * source, T_TextureQuad * quad,T_QUAD * quadOccluded, unsigned int quadArraySize,unsigned int quadToIgnore) {
+	glm::vec3 x_increment;
+	glm::vec3 y_increment;
+	glm::vec3 p1 = glm::vec3(quad->p1[0],quad->p1[1],quad->p1[2]);
+	glm::vec3 p2 = glm::vec3(quad->p2[0],quad->p2[1],quad->p2[2]);
+	glm::vec3 p3 = glm::vec3(quad->p3[0],quad->p3[1],quad->p3[2]);
+	glm::vec3 p4 = glm::vec3(quad->p4[0],quad->p4[1],quad->p4[2]);
+	glm::vec3 normal = glm::cross(p2-p1,p4-p1);
+	glm::vec3 light_position = glm::vec3(source->position[0],source->position[1],source->position[2]);
+	unsigned char * texture_data = (unsigned char*)malloc(sizeof(unsigned char) * width * height * 4);	
+	
+	x_increment = (p2 - p1) / (float)width;
+	y_increment = (p4 - p1) / (float)width;
+	
+	for (int i = 0;i < height;i++) {
+		for (int j = 0;j < width;j++) {
+			glm::vec3 current = p1 + (float)i*y_increment + (float)j*x_increment;
+			glm::vec3 lightdir = light_position - current;
+			normal = glm::normalize(normal);
+			lightdir = glm::normalize(lightdir);
+
+			float distanceToLight = glm::distance(current, light_position);
+			
+			bool isOccluded = false;
+			
+			if (distanceToLight < 40.f) {
+				for (int k = 0;k < quadArraySize;k++) {
+					
+					
+					if ((k == quadToIgnore) || (quadOccluded[k].state == DISABLED) || (quadOccluded[k].position != VERTICAL)) {
+						continue;
+					}
+					
+					
+					glm::vec3 ap1 = glm::vec3(quadOccluded[k].p1[0],quadOccluded[k].p1[1],quadOccluded[k].p1[2]);
+					glm::vec3 ap2 = glm::vec3(quadOccluded[k].p2[0],quadOccluded[k].p2[1],quadOccluded[k].p2[2]);
+					glm::vec3 ap3 = glm::vec3(quadOccluded[k].p3[0],quadOccluded[k].p3[1],quadOccluded[k].p3[2]);
+					glm::vec3 ap4 = glm::vec3(quadOccluded[k].p4[0],quadOccluded[k].p4[1],quadOccluded[k].p4[2]);
+					glm::vec3 intersec;
+					glm::vec3 position;
+					glm::vec3 bary;
+					if (glm::distance(ap1, light_position) < 40.0f) {
+					
+						if (glm::intersectRayTriangle(light_position,-lightdir, ap1,ap2,ap3,intersec)) {
+							//bary = (ap1 + ap2 + ap3)/3.f;
+							//position = intersec * bary;
+							position = ap1 * (1 - intersec.x - intersec.y) + ap2 * intersec.x + ap3 * intersec.y;
+							if (distanceToLight > glm::distance(position, light_position)) {
+								isOccluded = true;
+							}
+							break;
+						}
+						
+						
+						if (glm::intersectRayTriangle(light_position,-lightdir, ap3,ap4,ap1,intersec)) {
+							//bary = (ap3 + ap4 + ap1)/3.f; 
+							//position = intersec * bary;
+							position = ap3 * (1 - intersec.x - intersec.y) + ap4 * intersec.x + ap1 * intersec.y;
+							if (distanceToLight > glm::distance(position, light_position)) {
+								isOccluded = true;
+							}
+							break;
+						}
+						
+					}
+					
+				}
+			}
+			
+			
+			float attenuation = 1.0f /  distanceToLight * 3.0f;
+
+			float dot = glm::dot(normal,lightdir)  * attenuation;
+			
+			if ((!isOccluded) && (dot > 0.0f)) {
+				texture_data[(i*width+j)*4 + 0] = (dot * source->color[0]*255 + 30) > 255 ? 255 : dot * source->color[0]*255 + 30;
+				texture_data[(i*width+j)*4 + 1] = (dot * source->color[1]*255 + 30) > 255 ? 255 : dot * source->color[1]*255 + 30;
+				texture_data[(i*width+j)*4 + 2] = (dot * source->color[2]*255 + 30) > 255 ? 255 : dot * source->color[2]*255 + 30;
+				texture_data[(i*width+j)*4 + 3] = 255;
+			} else {
+				texture_data[(i*width+j)*4 + 0] = 30;
+				texture_data[(i*width+j)*4 + 1] = 30;
+				texture_data[(i*width+j)*4 + 2] = 30;
+				texture_data[(i*width+j)*4 + 3] = 255;
+			}
+		}
+	}
+	printf("Lightmap generated for quad: %d\n",quadToIgnore);
+	return new Texture(width,height,(unsigned char*)texture_data);
+}
+
+
 
 typedef struct {
 	unsigned char id_length;
