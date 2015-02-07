@@ -29,6 +29,7 @@ typedef struct {
 	float p4[3];
 	float pos_x;
 	float pos_y;
+	float distance;
 	T_POSITION position;
 	T_STATE state;
 } T_QUAD;
@@ -42,5 +43,6 @@ public :
 	static Texture * generateWhiteTexture();
 	static Texture * generateLightmapTexture(unsigned int width,unsigned int height,T_TextureLightSource * source, T_TextureQuad * quad);
 	static Texture * generateLightmapTextureWithOcclusion(unsigned int width,unsigned int height,T_TextureLightSource * source, T_TextureQuad * quad,T_QUAD * quadOccluded, unsigned int quadArraySize,unsigned int quadToIgnore);
+	static Texture * generateFloorLightmap(unsigned int width,unsigned int height,unsigned char value);
 	static void writeTGA(char * filename, unsigned char * map, int width, int height, bool invertRB);
 };

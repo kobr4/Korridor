@@ -275,16 +275,43 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 	unsigned int quadBegin = 0;
 	unsigned int quadEnd = 0;
 
-	T_TextureLightSource lightSource;
+	T_TextureLightSource lightSource[4];
+	unsigned int nbLightSource = 4;
 	T_TextureQuad currentQuad;
 
-	lightSource.color[0] = 1.0f;
-	lightSource.color[1] = 1.0f;
-	lightSource.color[2] = 1.0f;
+	lightSource[0].color[0] = 1.0f;
+	lightSource[0].color[1] = 1.0f;
+	lightSource[0].color[2] = 1.0f;
 
-	lightSource.position[0] = 22.0f;
-	lightSource.position[1] = 4.0f;
-	lightSource.position[2] = 61.0f;
+	lightSource[0].position[0] = 22.0f;
+	lightSource[0].position[1] = 4.0f;
+	lightSource[0].position[2] = 61.0f;
+
+	lightSource[1].color[0] = 1.0f;
+	lightSource[1].color[1] = 1.0f;
+	lightSource[1].color[2] = 1.0f;
+
+	lightSource[1].position[0] = 40.0f;
+	lightSource[1].position[1] = 4.0f;
+	lightSource[1].position[2] = 80.0f;
+
+	lightSource[2].color[0] = 1.0f;
+	lightSource[2].color[1] = 1.0f;
+	lightSource[2].color[2] = 1.0f;
+
+	lightSource[2].position[0] = 60.0f;
+	lightSource[2].position[1] = 4.0f;
+	lightSource[2].position[2] = 50.0f;
+
+	lightSource[3].color[0] = 1.0f;
+	lightSource[3].color[1] = 1.0f;
+	lightSource[3].color[2] = 1.0f;
+
+	lightSource[3].position[0] = 80.0f;
+	lightSource[3].position[1] = 4.0f;
+	lightSource[3].position[2] = 46.0f;
+
+
 
 	for (unsigned int i = 0;i < quadArrayCount;i++){ 
 		if (quadArray[i].state == ENABLED) {
@@ -316,7 +343,7 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 	spaceArray->triangleArray = (float*)malloc(sizeof(float) * 3 * 5 * spaceArray->triangleCount);
 	
 	Texture * main_texture = new Texture(1024,1024);
-	Texture * lightmap_texture = new Texture(1024,1024);
+	Texture * lightmap_texture = new Texture(256,256);
 	int tmpTCount = 0;
 	quadCounter = 0;
 	for (unsigned int i = quadBegin;i < quadEnd;i++) {
@@ -344,8 +371,50 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 				currentQuad.p4[z] = quadArray[i].p4[z];
 			}
 			//Texture * element_lightmap = TextureGenerator::generateLightmapTexture(256,256,&lightSource,&currentQuad);
-			Texture * element_lightmap = TextureGenerator::generateLightmapTextureWithOcclusion(256,256,&lightSource,&currentQuad,quadArray,quadArrayCount,i);
-			lightmap_texture->packTexture(element_lightmap,1024 / nbTexturePerLine * (quadCounter % nbTexturePerLine),1024 / nbTexturePerLine * (quadCounter / nbTexturePerLine));
+			
+			
+			// Light computation starts here.
+			Texture * element_lightmap = TextureGenerator::generateFloorLightmap(64,64,0);
+			for (int l = 0;l < nbLightSource;l++) {
+				glm::vec3 light_position = glm::vec3(lightSource[l].position[0],lightSource[l].position[1],lightSource[l].position[2]);
+				for (unsigned int i = 0;i < quadArrayCount;i++){ 
+					if (quadArray[i].state == ENABLED) {
+						quadArray[i].distance = glm::distance(light_position,glm::vec3(quadArray[i].p1[0],quadArray[i].p1[1],quadArray[i].p1[2]));
+			
+						float d;
+						d = glm::distance(light_position,glm::vec3(quadArray[i].p2[0],quadArray[i].p2[1],quadArray[i].p2[2]));
+						if (d < quadArray[i].distance) {
+							quadArray[i].distance = d;
+						}
+						d = glm::distance(light_position,glm::vec3(quadArray[i].p3[0],quadArray[i].p3[1],quadArray[i].p3[2]));
+						if (d < quadArray[i].distance) {
+							quadArray[i].distance = d;
+						}
+						d = glm::distance(light_position,glm::vec3(quadArray[i].p4[0],quadArray[i].p4[1],quadArray[i].p4[2]));
+						if (d < quadArray[i].distance) {
+							quadArray[i].distance = d;
+						}
+			
+					}
+				}
+				Texture * element_lightmap_per_light;
+				if (quadArray[i].distance < 40.0f) {
+					element_lightmap_per_light = TextureGenerator::generateLightmapTextureWithOcclusion(64,64,&lightSource[l],&currentQuad,quadArray,quadArrayCount,i);
+				
+				} else {
+					element_lightmap_per_light = TextureGenerator::generateFloorLightmap(64,64,30);
+				}
+
+				element_lightmap->merge(element_lightmap_per_light);
+				delete element_lightmap_per_light;
+				
+			}
+			element_lightmap->blur();
+			lightmap_texture->packTexture(element_lightmap,256 / nbTexturePerLine * (quadCounter % nbTexturePerLine),256 / nbTexturePerLine * (quadCounter / nbTexturePerLine));
+			delete element_lightmap;
+			
+			// Light computation ends here.
+
 
 			quadCounter++;
 			spaceArray->triangleArray[tmpTCount * 5 + 0] = quadArray[i].p1[0];

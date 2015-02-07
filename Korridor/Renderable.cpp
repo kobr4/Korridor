@@ -6,11 +6,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "OutputConsole.h"
 
 void Renderable::draw() {
 	if (glGetError() != GL_NO_ERROR) {
-		//puts("An error occured before draw.");
-		//exit(0);
+		OutputConsole::log("Renderable::draw() : An error occured before draw.");
 	}
 
 	if (this->texture != NULL) {
@@ -61,8 +61,7 @@ void Renderable::draw() {
 	
 
 	if (glGetError() != GL_NO_ERROR) {
-		//puts("An error occured.");
-		//exit(0);
+		OutputConsole::log("Renderable::draw() : An error occured.");
 	}
 }
 

@@ -35,6 +35,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm\gtx\intersect.hpp>
 #include "Sprite.h"
 #include "Texture.h"
 #include "FastMath.h"
@@ -92,6 +93,35 @@ static unsigned int distort_caps;
 static unsigned int hmd_caps;
 
 SDL_Joystick * g_joystick = NULL; // on crée le joystick
+
+T_SPACE_OBJECT * spaceObjectArray = NULL;
+unsigned int spaceCount = 0;
+
+bool collide(T_SPACE_OBJECT * objectArray,unsigned int objectCount,glm::vec3 position, glm::vec3 heading) {
+	glm::vec3 intersec;
+	for (int i = 0;i < objectCount;i++) {
+		float * vertices = objectArray->triangleArray;
+		unsigned int counter = 0;
+		for (int i = 0;i < objectArray->triangleCount;i++) {
+			glm::vec3 p1 = glm::vec3(vertices[counter],vertices[counter+1],vertices[counter+2]);
+			glm::vec3 p2 = glm::vec3(vertices[counter+5],vertices[counter+6],vertices[counter+7]);
+			glm::vec3 p3 = glm::vec3(vertices[counter+10],vertices[counter+11],vertices[counter+12]);
+			if (glm::distance(position,p1) < 5.f) {
+				puts("Hellow");
+				if (glm::intersectRayTriangle(position,heading, p1,p2,p3,intersec)) {
+					glm::vec3 intersec = p1 * (1 - intersec.x - intersec.y) + p2 * intersec.x + p3 * intersec.y;
+					if (glm::distance(position, intersec) < 10.0f) {
+						printf("Distance = %f %d\n",glm::distance(position, intersec),counter/15);
+						return true;
+					}
+				}				
+			}
+			counter += 5*3;
+		}
+	
+	}
+	return false;
+}
 
 void func_exit_cb(void * data) {
 	Renderer * renderer = (Renderer*)data;
@@ -203,8 +233,8 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
 
 	//unsigned int triangleCount = 0;
 
-	T_SPACE_OBJECT * spaceObjectArray = NULL;
-	unsigned int spaceCount = 0;
+	
+
 	ClosedSpaceGenerator::generateSpace(100.f,10.f,&spaceObjectArray,&spaceCount,1024,256);
 	printf("Generated space : space count = %d\n",spaceCount);
 
@@ -605,7 +635,14 @@ void Renderer::draw()
 	glm::vec3 cam_pos = camera->getPosition();
 	sprintf(s,"Pos: %.1f %.1f %.1f",cam_pos[0],cam_pos[1],cam_pos[2]);
 	this->drawMessage(s,RendererTextAlign::ALIGNRIGHT,RendererTextAlign::ALIGNBOTTOM);
-	this->drawMessage("TOPLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
+	
+		if (collide(spaceObjectArray,spaceCount,camera->getPosition(), camera->getHeading())) {
+			this->drawMessage("Collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
+		} else {
+			this->drawMessage("No collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
+		}
+
+
 	this->drawMessage("BOTTOMLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);
 
 	if (UIWidget::currentWidget->isActive()){
@@ -671,6 +708,9 @@ void Renderer::loop()
 
 		if (dt != 0)
 			this->fps = 1000/dt;
+
+
+
 
 		if (xjaxis < -deadzone) {
 			camera->Move(CameraDirection::LEFT, -(float)(xjaxis)/32768.f);

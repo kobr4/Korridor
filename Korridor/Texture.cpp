@@ -28,6 +28,45 @@ void Texture::do_register() {
 	this->update();
 }
 
+void Texture::blur() { 
+	for (int i = 0;i < this->width;i++) { 
+		for (int j = 1;j < this->height-1;j++) {
+			unsigned int offset = i+ j*this->width;
+			this->pixels[offset*4] = (this->pixels[(offset-this->width)*4] + this->pixels[(offset+this->width)*4])/2;
+			this->pixels[offset*4+1] = (this->pixels[(offset-this->width)*4+1] + this->pixels[(offset+this->width)*4+1])/2;
+			this->pixels[offset*4+2] = (this->pixels[(offset-this->width)*4+2] + this->pixels[(offset+this->width)*4+2])/2;
+			this->pixels[offset*4+3] = (this->pixels[(offset-this->width)*4+3] + this->pixels[(offset+this->width)*4+3])/2;
+		}
+	}
+
+	for (int i = 1;i < this->width-1;i++) { 
+		for (int j = 0;j < this->height;j++) {
+			unsigned int offset = i+ j*this->width;
+			this->pixels[offset*4] = (this->pixels[(offset-1)*4] + this->pixels[(offset+1)*4])/2;
+			this->pixels[offset*4+1] = (this->pixels[(offset-1)*4+1] + this->pixels[(offset+1)*4+1])/2;
+			this->pixels[offset*4+2] = (this->pixels[(offset-1)*4+2] + this->pixels[(offset+1)*4+2])/2;
+			this->pixels[offset*4+3] = (this->pixels[(offset-1)*4+3] + this->pixels[(offset+1)*4+3])/2;
+		}
+	}
+}
+
+void Texture::merge(Texture * texture) {
+	unsigned int offset = 0;
+	for (int i = 0;i < texture->width;i++) { 
+		for (int j = 0;j < texture->height;j++) {
+			unsigned int a = texture->pixels[offset] + texture->pixels[offset+1] + texture->pixels[offset+2];
+			unsigned int b = this->pixels[offset] + this->pixels[offset+1] + this->pixels[offset+2];
+			if (a > b) {
+				this->pixels[offset] = texture->pixels[offset];
+				this->pixels[offset+1] = texture->pixels[offset+1];
+				this->pixels[offset+2] = texture->pixels[offset+2];
+				this->pixels[offset+3] = texture->pixels[offset+3];
+			}
+			offset = offset + 4;
+		}
+	}
+}
+
 void Texture::packTexture(Texture * texture,int top_x,int top_y) {
 	for (int i = 0;i < texture->width;i++) { 
 		for (int j = 0;j < texture->height;j++) {

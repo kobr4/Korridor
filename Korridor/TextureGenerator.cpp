@@ -95,7 +95,6 @@ Texture * TextureGenerator::generateLightmapTexture(unsigned int width,unsigned 
 			}
 		}
 	}
-	puts("kikoo");
 	return new Texture(width,height,(unsigned char*)texture_data);
 }
 
@@ -128,7 +127,7 @@ Texture * TextureGenerator::generateLightmapTextureWithOcclusion(unsigned int wi
 				for (int k = 0;k < quadArraySize;k++) {
 					
 					
-					if ((k == quadToIgnore) || (quadOccluded[k].state == DISABLED) || (quadOccluded[k].position != VERTICAL)) {
+					if ((k == quadToIgnore) || (quadOccluded[k].state == DISABLED) || (quadOccluded[k].position != VERTICAL) || (quadOccluded[k].distance > distanceToLight)) {
 						continue;
 					}
 					
@@ -140,7 +139,7 @@ Texture * TextureGenerator::generateLightmapTextureWithOcclusion(unsigned int wi
 					glm::vec3 intersec;
 					glm::vec3 position;
 					glm::vec3 bary;
-					if (glm::distance(ap1, light_position) < 40.0f) {
+					//if (glm::distance(ap1, light_position) < 40.0f) {
 					
 						if (glm::intersectRayTriangle(light_position,-lightdir, ap1,ap2,ap3,intersec)) {
 							//bary = (ap1 + ap2 + ap3)/3.f;
@@ -163,13 +162,13 @@ Texture * TextureGenerator::generateLightmapTextureWithOcclusion(unsigned int wi
 							break;
 						}
 						
-					}
+					//}
 					
 				}
 			}
 			
 			
-			float attenuation = 1.0f /  distanceToLight * 3.0f;
+			float attenuation = 1.0f /  (distanceToLight *distanceToLight) * 40.0f;
 
 			float dot = glm::dot(normal,lightdir)  * attenuation;
 			
@@ -190,7 +189,19 @@ Texture * TextureGenerator::generateLightmapTextureWithOcclusion(unsigned int wi
 	return new Texture(width,height,(unsigned char*)texture_data);
 }
 
-
+Texture * TextureGenerator::generateFloorLightmap(unsigned int width,unsigned int height,unsigned char value) {
+	unsigned char * texture_data = (unsigned char*)malloc(sizeof(unsigned char) * width * height * 4);	
+	unsigned int counter = 0;
+	for (int i = 0;i < height;i++) {
+		for (int j = 0;j < width;j++) {
+			texture_data[counter++] = value;
+			texture_data[counter++] = value;
+			texture_data[counter++] = value;
+			texture_data[counter++] = 255;
+		}
+	}
+	return new Texture(width,height,(unsigned char*)texture_data);
+}
 
 typedef struct {
 	unsigned char id_length;

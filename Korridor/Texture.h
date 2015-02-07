@@ -28,6 +28,8 @@ public :
 	}
 
 	void packTexture(Texture * texture,int top_x,int top_y);
+	void blur();
+	void merge (Texture * texture);
 	void bind();
 	void unbind();
 	void do_register();
