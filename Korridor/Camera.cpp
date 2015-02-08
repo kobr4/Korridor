@@ -20,8 +20,12 @@ void Camera::Reset() {
 }
 
 
-glm::vec3 Camera::getHeading() {
-	return glm::vec3(glm::normalize(camera_look_at - camera_position));
+glm::vec3 Camera::getMotionHeading() {
+	return glm::vec3(glm::normalize(camera_position_delta));
+}
+
+void Camera::resetMotionHeading() {
+	camera_position_delta = glm::vec3(0.0f,0.0f,0.0f);
 }
 
 void Camera::Update() {

@@ -76,7 +76,8 @@ class Camera {
 		//OVR camera translation
 		glm::mat4 TranslateToEye(float ipdFactor);
 
-		glm::vec3 getHeading();
+		glm::vec3 getMotionHeading();
+		void resetMotionHeading();
 
 		//Getting Functions
 		CameraType GetMode();

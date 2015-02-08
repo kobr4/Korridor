@@ -7,6 +7,7 @@
 class Renderer;
 
 typedef void (uiwidget_func_cb)(void * data);
+typedef void (uiwidget_func_bool_change_cb)(bool newState, void * data);
 class UIWidget {
 
 protected :
@@ -62,10 +63,13 @@ public :
 class UIBoolean : public UIHeader {
 protected :
 	bool state;
+	uiwidget_func_bool_change_cb * boolChangeFuncCb;
+	void * boolChangeFuncData;
 public :
 	UIBoolean():UIHeader(){};
 	void setState(bool b);
 	bool getState();
+	void setOnBoolChangeCallback(uiwidget_func_bool_change_cb * func, void * data);
 	virtual void draw(Renderer * renderer,Uint32 x,Uint32 y);
 	virtual void onClick();
 };

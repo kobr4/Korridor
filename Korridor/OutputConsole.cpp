@@ -21,18 +21,17 @@ void OutputConsole::setRenderer(Renderer * renderer) {
 }
 
 void OutputConsole::log(const char * message,...) {
-	if (OutputConsole::outputConsole->renderer != NULL) {
-		char s[1024];
-		s[0] = 0;
-		va_list argptr;
-		va_start(argptr, message);
-		vsprintf(s, message, argptr);
-		va_end(argptr);	
-		for (int i = 1;i < 4;i++) {
-			strcpy(OutputConsole::outputConsole->sBuffer[i-1],OutputConsole::outputConsole->sBuffer[i]); 
-		}
-		strcpy(OutputConsole::outputConsole->sBuffer[3],s); 
+	char s[1024];
+	s[0] = 0;
+	va_list argptr;
+	va_start(argptr, message);
+	vsprintf(s, message, argptr);
+	va_end(argptr);	
+	for (int i = 1;i < 4;i++) {
+		strcpy(OutputConsole::outputConsole->sBuffer[i-1],OutputConsole::outputConsole->sBuffer[i]); 
 	}
+	strcpy(OutputConsole::outputConsole->sBuffer[3],s); 
+	printf("%s",s);
 }
 
 void OutputConsole::render() {

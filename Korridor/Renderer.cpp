@@ -63,6 +63,8 @@
 #include <OVR_CAPI.h>
 #include <OVR_CAPI_GL.h>
 
+const float Renderer::hudScale = 0.75f;
+
 unsigned char g_texdata[]= { 255, 255, 255, 255, 255, 255, 255, 255,
 							255, 255, 255, 255, 255, 255, 255, 255};
 
@@ -93,6 +95,8 @@ static unsigned int distort_caps;
 static unsigned int hmd_caps;
 
 SDL_Joystick * g_joystick = NULL; // on crée le joystick
+bool g_collision_detection = true;
+bool g_cullface = true;
 
 T_SPACE_OBJECT * spaceObjectArray = NULL;
 unsigned int spaceCount = 0;
@@ -100,18 +104,17 @@ unsigned int spaceCount = 0;
 bool collide(T_SPACE_OBJECT * objectArray,unsigned int objectCount,glm::vec3 position, glm::vec3 heading) {
 	glm::vec3 intersec;
 	for (int i = 0;i < objectCount;i++) {
-		float * vertices = objectArray->triangleArray;
+		float * vertices = objectArray[i].triangleArray;
 		unsigned int counter = 0;
-		for (int i = 0;i < objectArray->triangleCount;i++) {
+		for (int j = 0;j < objectArray[i].triangleCount;j++) {
 			glm::vec3 p1 = glm::vec3(vertices[counter],vertices[counter+1],vertices[counter+2]);
 			glm::vec3 p2 = glm::vec3(vertices[counter+5],vertices[counter+6],vertices[counter+7]);
 			glm::vec3 p3 = glm::vec3(vertices[counter+10],vertices[counter+11],vertices[counter+12]);
-			if (glm::distance(position,p1) < 5.f) {
-				puts("Hellow");
+			if (glm::distance(position,p1) < 10.f) {
 				if (glm::intersectRayTriangle(position,heading, p1,p2,p3,intersec)) {
-					glm::vec3 intersec = p1 * (1 - intersec.x - intersec.y) + p2 * intersec.x + p3 * intersec.y;
-					if (glm::distance(position, intersec) < 10.0f) {
-						printf("Distance = %f %d\n",glm::distance(position, intersec),counter/15);
+					glm::vec3 intersec_pos = p1 * (1 - intersec.x - intersec.y) + p2 * intersec.x + p3 * intersec.y;
+					if (glm::distance(position, intersec_pos) < 2.0f) {
+						//printf("Distance = %f %d\n",glm::distance(position, intersec_pos),counter/15);
 						return true;
 					}
 				}				
@@ -121,6 +124,22 @@ bool collide(T_SPACE_OBJECT * objectArray,unsigned int objectCount,glm::vec3 pos
 	
 	}
 	return false;
+}
+
+
+void func_joystick_cb(void * data) {
+	if (g_joystick == NULL) {
+		g_joystick = SDL_JoystickOpen(0);
+	}
+	OutputConsole::log("Force joystick detection");
+}
+
+void func_bool_collision_change_cb(bool newState, void * data) {
+	g_collision_detection = newState;
+}
+
+void func_bool_cullface_change_cb(bool newState, void * data) {
+	g_cullface = newState;
 }
 
 void func_exit_cb(void * data) {
@@ -133,12 +152,11 @@ void func_back_cb(void * data) {
 	UIWidget * widget = (UIWidget *)data;
 	if (widget->getParent() != NULL && widget->getParent()->getParent() != NULL) {
 		UIWidget::currentWidget = widget->getParent()->getParent();
-			puts("kikoo !");
 	}
 
 }
 
-void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
+void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fullscreen)
 {
 	/* libovr must be initialized before we create the OpenGL context */
     ovr_Initialize();
@@ -174,7 +192,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
 
-	displayWindow = SDL_CreateWindow("Test SDL 2.0", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->screenWidth, this->screenHeight, SDL_WINDOW_OPENGL  /*| SDL_WINDOW_FULLSCREEN*/);
+	displayWindow = SDL_CreateWindow("Test SDL 2.0", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->screenWidth, this->screenHeight, SDL_WINDOW_OPENGL  | (fullscreen ? SDL_WINDOW_FULLSCREEN : 0));
     
     // Création du contexte OpenGL
   
@@ -367,12 +385,19 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight)
 	header1->setLabel("Option");
 	{
 		UIHeader * headerOption1 = new UIHeader();
-		headerOption1->setLabel("Option 1");
+		headerOption1->setLabel("Joystick detection");
+		headerOption1->setOnClickCallback(&func_joystick_cb,NULL);
 		header1->addChild(headerOption1);
 
 		UIBoolean * headerBoolean = new UIBoolean();
-		headerBoolean->setLabel("Boolean");
+		headerBoolean->setLabel("Collision detection");
+		headerBoolean->setOnBoolChangeCallback(func_bool_collision_change_cb,NULL);
 		header1->addChild(headerBoolean);
+
+		UIBoolean * headerBoolean2 = new UIBoolean();
+		headerBoolean2->setLabel("Faces culling");
+		headerBoolean2->setOnBoolChangeCallback(func_bool_cullface_change_cb,NULL);
+		header1->addChild(headerBoolean2);
 
 		UIHeader * headerOptionBack = new UIHeader();
 		headerOptionBack->setLabel("Back");
@@ -449,7 +474,7 @@ void Renderer::drawMessage(SDL_Surface * textSur,float x,float y) {
 void Renderer::drawMessage(const char * message,RendererTextAlign hAlign,RendererTextAlign vAlign)
 {
 	SDL_Color fontcolor = {255, 255, 255};
-	const float hudScale = 0.75f;
+
 
 	if (strlen(message) == 0)
 		return;
@@ -523,7 +548,11 @@ void Renderer::draw()
 	
 	this->fbDrawing->bind();
 	//OpenGL setup
-	glEnable(GL_CULL_FACE);
+	if (g_cullface) {
+		glEnable(GL_CULL_FACE);
+	} else {
+		glDisable(GL_CULL_FACE);
+	}
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
@@ -543,6 +572,14 @@ void Renderer::draw()
 	}
 	#endif
 	
+	if (g_collision_detection) {
+		if (collide(spaceObjectArray,spaceCount,camera->getPosition(), camera->getMotionHeading())) {
+			camera->resetMotionHeading();
+			this->drawMessage("Collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
+		} else {
+			this->drawMessage("No collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
+		}
+	}
 	camera->Update();
 	for (int eyeid = 0;eyeid < 2;eyeid++) {
 	//this->fbDrawing->unbind(screenWidth,screenHeight);	
@@ -635,12 +672,6 @@ void Renderer::draw()
 	glm::vec3 cam_pos = camera->getPosition();
 	sprintf(s,"Pos: %.1f %.1f %.1f",cam_pos[0],cam_pos[1],cam_pos[2]);
 	this->drawMessage(s,RendererTextAlign::ALIGNRIGHT,RendererTextAlign::ALIGNBOTTOM);
-	
-		if (collide(spaceObjectArray,spaceCount,camera->getPosition(), camera->getHeading())) {
-			this->drawMessage("Collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
-		} else {
-			this->drawMessage("No collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
-		}
 
 
 	this->drawMessage("BOTTOMLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);

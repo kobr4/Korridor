@@ -162,6 +162,9 @@ void UIHeader::draw(Renderer * renderer,Uint32 x,Uint32 y){
 }
 
 void UIBoolean::setState(bool b) {
+	if (b != this->state) {
+		this->boolChangeFuncCb(b,this->boolChangeFuncData);
+	}
 	this->state = b;
 }
 
@@ -190,5 +193,10 @@ void UIBoolean::draw(Renderer * renderer,Uint32 x,Uint32 y) {
 
 void UIBoolean::onClick() {
 	UIHeader::onClick();
-	this->state = !this->state;
+	setState(!this->state);
+}
+
+void UIBoolean::setOnBoolChangeCallback(uiwidget_func_bool_change_cb * func, void * data){
+	this->boolChangeFuncCb = func;
+	this->boolChangeFuncData = data;
 }

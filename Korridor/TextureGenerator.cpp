@@ -2,6 +2,7 @@
 #include "TextureGenerator.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "OutputConsole.h"
 #include <glm\glm.hpp>
 #include <glm\gtx\intersect.hpp>
 
@@ -185,7 +186,7 @@ Texture * TextureGenerator::generateLightmapTextureWithOcclusion(unsigned int wi
 			}
 		}
 	}
-	printf("Lightmap generated for quad: %d\n",quadToIgnore);
+	OutputConsole::log("Lightmap generated for quad: %d\n",quadToIgnore);
 	return new Texture(width,height,(unsigned char*)texture_data);
 }
 

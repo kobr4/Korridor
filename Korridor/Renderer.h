@@ -54,7 +54,7 @@ class Camera;
 class Renderer
 {
 public :
-	void init(unsigned int screenWidth, unsigned int screenHeight);
+	void init(unsigned int screenWidth, unsigned int screenHeight, bool fullscreen);
 
 	void loop();
 	void draw();
@@ -71,6 +71,7 @@ public :
 
 	void setExitState();
 private :
+	static const float hudScale;
 	unsigned int screenHeight;
 	unsigned int screenWidth;
 	unsigned int frameCounter;
