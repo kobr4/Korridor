@@ -79,6 +79,7 @@ SDL_Surface* CreateSurface(Uint32 flags,int width,int height,const SDL_Surface* 
 #include "Renderable.h"
 //Renderable * g_renderable;
 std::vector<Renderable*> g_renderableList = std::vector<Renderable*>();
+Renderable * sphereRenderable;
 Shader * g_shader_debug;
 float * g_vertexBuffer = NULL;
 
@@ -267,6 +268,11 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		g_renderableList.push_back(renderable);
 	}
 	
+	T_SPACE_OBJECT sphereSpace;
+	ClosedSpaceGenerator::generateSphere(&sphereSpace,0.25f,5);
+	sphereRenderable =  Renderable::createRenderable(g_shader_debug, sphereSpace.texture, sphereSpace.triangleArray, sphereSpace.triangleCount);
+	sphereRenderable->setSecondaryTexture(sphereSpace.texture);
+
 	camera = new Camera();
 	camera->SetClipping(0.1f,200.f);
 	camera->SetPosition(glm::vec3(14.7f,1.9f,57.5f));
@@ -655,6 +661,18 @@ void Renderer::draw()
 	for (unsigned int i = 0;i < g_renderableList.size();i++) {
 		g_renderableList[i]->draw();
 	}
+	
+
+	
+	//lightSource[0].position[0] = 22.0f;
+	//lightSource[0].position[1] = 4.0f;
+	//lightSource[0].position[2] = 61.0f;
+	
+	M = glm::mat4();
+	M = glm::translate(glm::vec3(22.0f,4.0f,61.0f));
+	memcpy(g_shader_debug->getModelViewMatrix(),glm::value_ptr(V*M),sizeof(float)*16);
+	g_shader_debug->bind_attributes();
+	sphereRenderable->draw();
 	
 	g_shader_debug->unbind();
 

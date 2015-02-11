@@ -15,4 +15,6 @@ public :
 	//static void generateSpace(float dimension, float unit_distance, T_SPACE_OBJECT ** spaceArray, unsigned int * spaceCount);	
 	static void generateSpace(float dimension, float unit_distance, T_SPACE_OBJECT ** spaceArray, unsigned int * spaceCount,
 		unsigned int maxTextureWidth, unsigned int textureWidth);
+
+	static void generateSphere(T_SPACE_OBJECT * sphere, float diameter, unsigned int nbSlices);
 };

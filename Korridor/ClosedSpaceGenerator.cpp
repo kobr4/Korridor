@@ -1,5 +1,6 @@
 #include <glm\glm.hpp>
 #include <glm\gtx\rotate_vector.hpp>
+#include <glm\gtc\constants.hpp>
 #include "ClosedSpaceGenerator.h"
 #include <stdio.h>
 #include "Texture.h"
@@ -611,4 +612,41 @@ void ClosedSpaceGenerator::generateSpace(float dimension, float unit_distance, T
 		quadArrayToVertexbuffer(quadArray, quadArrayCount, i * step, (i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step ,maxTextureWidth/textureWidth,&(*spaceArray)[i]);
 	}
 	free(quadArray);
+}
+
+void ClosedSpaceGenerator::generateSphere(T_SPACE_OBJECT * sphere, float radius, unsigned int nbSlices) {
+	sphere->triangleCount = nbSlices * nbSlices * 2;
+	sphere->triangleArray = (float*)malloc(sizeof(float) * sphere->triangleCount  * 3 * 5);
+	unsigned int count = 0;
+	for (int i = 0;i < nbSlices;i++) {
+		for (int j = 0;j < nbSlices;j++) {
+
+			float alpha = glm::pi<float>()*2 / (nbSlices+1) * i;
+            float beta = glm::pi<float>()*2 / nbSlices * j;
+            float alpha1 = glm::pi<float>()*2  / (nbSlices+1) * (i + 1);
+            float beta1 = glm::pi<float>()*2 / nbSlices * (j + 1);
+
+
+			glm::vec3 a = glm::vec3(radius * sin(alpha) * cos(beta), radius * cos(alpha),radius * sin(alpha) * sin(beta));
+            glm::vec3 b = glm::vec3(radius * sin(alpha) * cos(beta1), radius * cos(alpha),radius * sin(alpha) * sin(beta1));
+            glm::vec3 c = glm::vec3(radius * sin(alpha1) * cos(beta1), radius * cos(alpha1),radius * sin(alpha1) * sin(beta1));
+            glm::vec3 d = glm::vec3(radius * sin(alpha1) * cos(beta), radius * cos(alpha1),radius * sin(alpha1) * sin(beta));
+
+			for (int k = 0;k < 3;k++) sphere->triangleArray[count++] = a[k];
+			count += 2;
+			for (int k = 0;k < 3;k++) sphere->triangleArray[count++] = b[k];
+			count += 2;
+			for (int k = 0;k < 3;k++) sphere->triangleArray[count++] = c[k];
+			count += 2;
+
+			for (int k = 0;k < 3;k++) sphere->triangleArray[count++] = a[k];
+			count += 2;
+			for (int k = 0;k < 3;k++) sphere->triangleArray[count++] = c[k];
+			count += 2;			
+			for (int k = 0;k < 3;k++) sphere->triangleArray[count++] = d[k];
+			count += 2;
+		}
+	}
+
+	sphere->texture = TextureGenerator::generateWhiteTexture();
 }
