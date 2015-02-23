@@ -1,5 +1,9 @@
 #pragma once
+#include <stdio.h>
+
 class Texture;
+class Sprite;
+
 class FrameBuffer {
 private :
 	unsigned int fb;
@@ -8,6 +12,7 @@ private :
 	int width;
 	int height;
 	unsigned char * pixels;
+	Sprite * sprite;
 public :
 	FrameBuffer(int width,int height) {
 		this->width = width;
@@ -15,13 +20,14 @@ public :
 		this->fb = 0;
 		this->depthRb = 0;
 		this->renderTex = 0;
+		this->sprite = NULL;
 	}
 	void bind();
 	void unbind(int screenWidth, int screenHeight);
 	void do_register();
-	void draw(int screenWidth, int screenHeight);
 	int getTextureId() {
 		return renderTex;
 	}
 	Texture * getTexture();
+	void draw(unsigned int width = 0,unsigned int height = 0);
 };

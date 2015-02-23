@@ -7,6 +7,8 @@ typedef struct {
 	Texture * lightMapTexture;
 	float * triangleArray;
 	unsigned int triangleCount;
+	float * lightPosition;
+	unsigned int lightCount;
 } T_SPACE_OBJECT;
 
 class ClosedSpaceGenerator {

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include "Texture.h"
 #include "TextureGenerator.h"
-
+#include <vector>
 
 
 
@@ -16,7 +16,7 @@ unsigned int g_max_iteration = 20;
 unsigned int * g_node_stack;
 unsigned int g_node_position;
 bool * g_maze_grid;
-
+std::vector<T_TextureLightSource> gLightSourceVector;
 
 void generateTop(T_QUAD * quadArray, unsigned int * quadArrayCount, unsigned int con_face_indice, float dimension, float unit_distance, float pos_x, float pos_y) {
 	quadArray[*quadArrayCount].p1[0] = pos_x - unit_distance / 2.0f;
@@ -271,15 +271,84 @@ void generateRoom(T_QUAD * quadArray, unsigned int * quadArrayCount, unsigned in
 	}
 }
 
+
+void generateLightSource(T_QUAD * quadArray,unsigned int quadArrayCount,int begin, int end, T_SPACE_OBJECT * spaceArray) {
+	unsigned int quadBegin = 0;
+	unsigned int quadEnd = 0;
+	int quadCounter = 0;
+	T_TextureLightSource lightSource;
+
+	unsigned int counter = 0;
+	
+	for (unsigned int i = 0;i < quadArrayCount;i++){ 
+		if (quadArray[i].state == ENABLED) {
+			
+			if (quadCounter == begin) {
+				quadBegin = i;
+			}
+
+			if (quadCounter == end) {
+				quadEnd = i;
+			}
+
+			quadCounter++;
+		}
+	}
+	if (quadEnd == 0) {
+		quadEnd = quadArrayCount;
+	}	
+	
+	for (unsigned int i = quadBegin;i < quadEnd;i++) {
+		if (quadArray[i].state == ENABLED) {
+			counter++;
+		}
+	}
+
+	// Lightsource generation
+	unsigned int nbLightSource = counter / 15;
+	//nbLightSource = 1;
+	spaceArray->lightCount = nbLightSource;
+	if (nbLightSource > 0) {
+		spaceArray->lightPosition = (float*)malloc(sizeof(float)*3*nbLightSource);
+		for (int nlt = 0; nlt < nbLightSource;nlt++) {
+			unsigned int pos = 0;
+			do {
+				pos = (rand()%(quadEnd - quadBegin)) + quadBegin;
+				if ((quadArray[pos].state == ENABLED)&&(quadArray[pos].position==TOP)) {
+					float x = (quadArray[pos].p1[0] + quadArray[pos].p2[0] + quadArray[pos].p3[0] + quadArray[pos].p4[0])/4.0f;
+					float y = quadArray[pos].p1[1] - 0.5f;
+					float z = (quadArray[pos].p1[2] + quadArray[pos].p2[2] + quadArray[pos].p3[2] + quadArray[pos].p4[2])/4.0f;
+					spaceArray->lightPosition[nlt * 3] = x;
+					spaceArray->lightPosition[nlt * 3 + 1] = y;
+					spaceArray->lightPosition[nlt * 3 + 2] = z;
+
+
+					lightSource.color[0] = 1.0f;
+					lightSource.color[1] = 1.0f;
+					lightSource.color[2] = 1.0f;
+					lightSource.position[0] = x;
+					lightSource.position[1] = y;
+					lightSource.position[2] = z;
+
+					gLightSourceVector.push_back(lightSource);
+					
+				}
+			} while ((quadArray[pos].state != ENABLED)||(quadArray[pos].position!=TOP));
+		}	
+	}
+}
+
 void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int begin, int end,unsigned int nbTexturePerLine, T_SPACE_OBJECT * spaceArray) {
 	int quadCounter = 0;
 	unsigned int quadBegin = 0;
 	unsigned int quadEnd = 0;
 
-	T_TextureLightSource lightSource[4];
-	unsigned int nbLightSource = 4;
+	T_TextureLightSource lightSource;
+	
 	T_TextureQuad currentQuad;
 
+	/*
+	unsigned int nbLightSource = 4;
 	lightSource[0].color[0] = 1.0f;
 	lightSource[0].color[1] = 1.0f;
 	lightSource[0].color[2] = 1.0f;
@@ -311,7 +380,7 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 	lightSource[3].position[0] = 80.0f;
 	lightSource[3].position[1] = 4.0f;
 	lightSource[3].position[2] = 46.0f;
-
+	*/
 
 
 	for (unsigned int i = 0;i < quadArrayCount;i++){ 
@@ -376,8 +445,29 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 			
 			// Light computation starts here.
 			Texture * element_lightmap = TextureGenerator::generateFloorLightmap(64,64,0);
-			for (int l = 0;l < nbLightSource;l++) {
-				glm::vec3 light_position = glm::vec3(lightSource[l].position[0],lightSource[l].position[1],lightSource[l].position[2]);
+			for (int l = 0;l < gLightSourceVector.size();l++) {
+			//for (int l = 0;l < 1;l++) {
+				/*
+				lightSource.color[0] = 1.0f;
+				lightSource.color[1] = 1.0f;
+				lightSource.color[2] = 1.0f;
+
+				lightSource.position[0] = spaceArray->lightPosition[l * 3];
+				lightSource.position[1] = spaceArray->lightPosition[l * 3 + 1];
+				lightSource.position[2] = spaceArray->lightPosition[l * 3 + 2];
+				*/
+				lightSource = gLightSourceVector[l];
+
+				/*
+				lightSource.color[0] = 1.0f;
+				lightSource.color[1] = 1.0f;
+				lightSource.color[2] = 1.0f;
+				lightSource.position[0] = 22.0f;
+				lightSource.position[1] = 4.0f;
+				lightSource.position[2] = 61.0f;
+				*/
+				//printf("Light[%d] %f %f %f\n",l,lightSource.position[0],lightSource.position[1],lightSource.position[2]);
+				glm::vec3 light_position = glm::vec3(lightSource.position[0],lightSource.position[1],lightSource.position[2]);
 				for (unsigned int i = 0;i < quadArrayCount;i++){ 
 					if (quadArray[i].state == ENABLED) {
 						quadArray[i].distance = glm::distance(light_position,glm::vec3(quadArray[i].p1[0],quadArray[i].p1[1],quadArray[i].p1[2]));
@@ -399,8 +489,8 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 					}
 				}
 				Texture * element_lightmap_per_light;
-				if (quadArray[i].distance < 40.0f) {
-					element_lightmap_per_light = TextureGenerator::generateLightmapTextureWithOcclusion(64,64,&lightSource[l],&currentQuad,quadArray,quadArrayCount,i);
+				if (quadArray[i].distance < 40.0f) {	
+					element_lightmap_per_light = TextureGenerator::generateLightmapTextureWithOcclusion(64,64,&lightSource,&currentQuad,quadArray,quadArrayCount,i);
 				
 				} else {
 					element_lightmap_per_light = TextureGenerator::generateFloorLightmap(64,64,30);
@@ -465,7 +555,6 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 
 	spaceArray->texture = main_texture;
 	spaceArray->lightMapTexture = lightmap_texture;
-	//printf("Quad count= %d\n",quadCounter);
 }
 
 unsigned int checkMaze(unsigned int position,unsigned int linesize) {
@@ -607,6 +696,12 @@ void ClosedSpaceGenerator::generateSpace(float dimension, float unit_distance, T
 	unsigned int objectCount = enabledQuadCounter / step + 1;
 	*spaceArray = (T_SPACE_OBJECT*)malloc(sizeof(T_SPACE_OBJECT)*objectCount);
 	*spaceCount = objectCount;
+	
+	for (int i = 0; i < objectCount;i++) {
+		generateLightSource(quadArray,quadArrayCount,i * step, (i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step , &(*spaceArray)[i]); 
+	}
+	
+
 	for (int i = 0; i < objectCount;i++) {
 		//printf("Creating quad array indices %d to %d\n",i*step,(i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step);
 		quadArrayToVertexbuffer(quadArray, quadArrayCount, i * step, (i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step ,maxTextureWidth/textureWidth,&(*spaceArray)[i]);

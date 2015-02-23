@@ -47,6 +47,7 @@ UIWidget * UIWidget::getParent() {
 void UIWidget::handleEvent(SDL_Event event) {
 	unsigned int mousex;
 	unsigned int mousey;
+	static bool yBackDeadzone = true;
 	int selected = 0;
 
 	if (this->childs.size() == 0) {
@@ -113,12 +114,50 @@ void UIWidget::handleEvent(SDL_Event event) {
 				}
 			}
 			break;
+		case SDL_JOYBUTTONDOWN:
 		case SDL_FINGERDOWN:
 		case SDL_MOUSEBUTTONDOWN:
 			this->childs[selected]->onClick();
 			break;
-		
-			
+		case SDL_JOYAXISMOTION:
+			if (event.jaxis.axis == 0) {
+				
+			}
+
+			if (event.jaxis.axis == 1) {
+				if (abs(event.jaxis.value) < 400) {
+					yBackDeadzone = true;
+				}
+
+				if (yBackDeadzone && event.jaxis.value < -400) {
+					// DOWN
+					this->childs[selected]->setSelected(false);
+					selected = (++selected)%this->childs.size();
+					this->childs[selected]->setSelected(true);
+					yBackDeadzone = false;
+				}
+
+				if (yBackDeadzone && event.jaxis.value > 400) {
+					// UP !
+					this->childs[selected]->setSelected(false);
+					(--selected < 0) ? selected = selected + this->childs.size() : selected;
+					this->childs[selected]->setSelected(true);
+					yBackDeadzone = false;				
+				}
+
+
+				//yjaxis = event.jaxis.value / 10;
+			}
+			/*
+			if (event.jaxis.axis == 2) {
+				zjaxis = event.jaxis.value / 10;
+			}
+
+			if (event.jaxis.axis == 3) {
+				wjaxis = event.jaxis.value / 10;
+			}
+			*/
+			break;
 	}
 }
 

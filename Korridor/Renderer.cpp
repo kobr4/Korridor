@@ -46,7 +46,7 @@
 
 #include "UIWidget.h"
 
-//#define OVR
+#define OVR
 #define OVR_OS_WIN32
 /*
 #ifdef WIN32
@@ -186,7 +186,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
       
-      
+    //SDL_GL_SetSwapInterval(0); 
     // Double Buffer
       
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -240,12 +240,12 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	shaderTexturing->load_fragment("fragment_texturing.gl");
 	shaderTexturing->load_vertex("vertex.gl");
 
-	Texture * texture = new Texture(2,2,(unsigned char*)g_texdata);
-	this->spriteDrawing = new Sprite(texture,100.f,100.f,0,0,1,1);
+	//Texture * texture = new Texture(2,2,(unsigned char*)g_texdata);
+	//this->spriteDrawing = new Sprite(texture,100.f,100.f,0,0,1,1);
 	Texture * textSurfaceTexture = new Texture(this->screenWidth,this->screenHeight,(unsigned char*)this->textSurface->pixels);
 	this->spriteTextSurface = new Sprite(textSurfaceTexture,(float)this->screenWidth,(float)this->screenHeight,0,1,1,0);
 	this->fbDrawing = NULL;
-
+	this->fbHalfRes = NULL;
 
 	//Texture * checker_texture = new Texture(2,2,(unsigned char*)g_checker_texdata);
 
@@ -419,6 +419,8 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	headWidget->addChild(header2);
 
 	UIWidget::currentWidget = headWidget;
+
+
 }
 
 
@@ -540,10 +542,15 @@ void Renderer::draw()
 
 	SDL_FillRect(this->textSurface, NULL, 0x000000);
 
+	if (this->fbHalfRes == NULL){ 
+		this->fbHalfRes = new FrameBuffer(this->screenWidth / 4,this->screenHeight / 4);
+		this->fbHalfRes->do_register();
+	}
+
 	if (this->fbDrawing == NULL){ 
 		this->fbDrawing = new FrameBuffer(this->screenWidth,this->screenHeight);
 		this->fbDrawing->do_register();
-		this->spriteDrawing = new Sprite(this->fbDrawing->getTexture(),(float)this->screenWidth,(float)this->screenHeight,0,0,1,1);		
+		//this->spriteDrawing = new Sprite(this->fbDrawing->getTexture(),(float)this->screenWidth,(float)this->screenHeight,0,0,1,1);		
 
 		#ifdef OVR
 		for(int i=0; i<2; i++) {
@@ -574,7 +581,7 @@ void Renderer::draw()
 		ovrPoseStatef pose = ts.HeadPose;
 		glm::quat quat = glm::quat(pose.ThePose.Orientation.w,pose.ThePose.Orientation.x,pose.ThePose.Orientation.y,pose.ThePose.Orientation.z);
 		glm::vec3 pose3f = glm::eulerAngles(quat);
-		this->camera->MoveOvr(-pose3f[0],pose3f[1],pose3f[2]);
+		this->camera->MoveOvr(-pose3f[0],-pose3f[1],pose3f[2]);
 	}
 	#endif
 	
@@ -662,12 +669,6 @@ void Renderer::draw()
 		g_renderableList[i]->draw();
 	}
 	
-
-	
-	//lightSource[0].position[0] = 22.0f;
-	//lightSource[0].position[1] = 4.0f;
-	//lightSource[0].position[2] = 61.0f;
-	
 	M = glm::mat4();
 	M = glm::translate(glm::vec3(22.0f,4.0f,61.0f));
 	memcpy(g_shader_debug->getModelViewMatrix(),glm::value_ptr(V*M),sizeof(float)*16);
@@ -685,7 +686,19 @@ void Renderer::draw()
 	memcpy(this->shaderTexturing->getModelViewMatrix(), glm::value_ptr(glm::mat4()),sizeof(float)*16);
 	this->shaderTexturing->bind_attributes();
 
+
+	/*
+	fbHalfRes->bind();
+	this->shaderTexturing->bind();
+
+	fbHalfRes->unbind(this->screenWidth,this->screenHeight);
+	*/
 	glDisable(GL_DEPTH_TEST);
+
+
+
+
+
 	char s[1024];
 	glm::vec3 cam_pos = camera->getPosition();
 	sprintf(s,"Pos: %.1f %.1f %.1f",cam_pos[0],cam_pos[1],cam_pos[2]);
@@ -723,7 +736,7 @@ void Renderer::draw()
 	memcpy(this->shaderTexturing->getProjectionMatrix(), glm::value_ptr(projMat),sizeof(float)*16);
 	memcpy(this->shaderTexturing->getModelViewMatrix(), glm::value_ptr(glm::mat4()),sizeof(float)*16);
 	this->shaderTexturing->bind_attributes();
-	this->spriteDrawing->draw();
+	this->fbDrawing->draw(this->screenWidth,this->screenHeight);
 	this->shaderTexturing->unbind();
 
 	#ifndef OVR
@@ -746,7 +759,7 @@ void Renderer::loop()
 	int yjaxis = 0;
 	int zjaxis = 0;
 	int wjaxis = 0;
-	int deadzone = 400;
+	const int deadzone = 400;
 
 	while (!bExit)
 	{
