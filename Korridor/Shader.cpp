@@ -2,13 +2,137 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "OutputConsole.h"
 #include <GL/glew.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 int Shader::vertexPositionHandle = 1;
 int Shader::texCoordHandle = 2;
 int Shader::texture0Handle = 0;
 int Shader::texture1Handle = 1;
+
+Shader * Shader::blurHorizontalShader = NULL;
+Shader * Shader::blurVerticalShader = NULL;
+Shader * Shader::texturingShader= NULL;
+
+const char * Shader::blurVerticalFragmentString =
+"varying vec4 vColor; \
+varying vec2 v_texture_coordinate;\
+uniform sampler2D my_color_texture;\
+\
+float offset = 0.004;\
+void main(void) {\
+	gl_FragColor = (\
+	texture2D(my_color_texture, v_texture_coordinate)\
+	+ texture2D(my_color_texture, v_texture_coordinate - vec2(0.0,offset))\
+	+ texture2D(my_color_texture, v_texture_coordinate + vec2(0.0,offset))\
+	+ texture2D(my_color_texture, v_texture_coordinate - vec2(0.0,offset*2))\
+	+ texture2D(my_color_texture, v_texture_coordinate + vec2(0.0,offset*2));\
+	) / 5.0;\
+}";
+const char * Shader::blurVerticalVertexString =
+"\
+uniform mat4 u_MVMatrix;\
+uniform mat4 u_PMatrix;\
+uniform vec4 u_CVector;\
+varying vec4 vColor;\
+varying vec2 v_texture_coordinate;\
+attribute vec4 a_Position;\
+attribute vec2 a_TexCoord;\
+\
+void main(void) {\
+	vColor = u_CVector;\
+	gl_Position = u_PMatrix * u_MVMatrix * a_Position;\
+	v_texture_coordinate = a_TexCoord;\
+}";
+const char * Shader::blurHorizontalFragmentString =
+"varying vec4 vColor;\
+varying vec2 v_texture_coordinate;\
+uniform sampler2D my_color_texture;\
+float offset = 0.004;\
+\
+void main(void) {\
+	gl_FragColor = (\
+	texture2D(my_color_texture, v_texture_coordinate)\
+	+ texture2D(my_color_texture, v_texture_coordinate - vec2(offset,0.0))\
+	+ texture2D(my_color_texture, v_texture_coordinate + vec2(offset,0.0))\
+	+ texture2D(my_color_texture, v_texture_coordinate - vec2(offset*2,0.0))\
+	+ texture2D(my_color_texture, v_texture_coordinate + vec2(offset*2,0.0))\
+	) / 5.0;\
+}";
+const char * Shader::blurHorizontalVertexString =
+"\
+uniform mat4 u_MVMatrix;\
+uniform mat4 u_PMatrix;\
+uniform vec4 u_CVector;\
+varying vec4 vColor;\
+varying vec2 v_texture_coordinate;\
+attribute vec4 a_Position;\
+attribute vec2 a_TexCoord;\
+\
+void main(void) {\
+	vColor = u_CVector;\
+	gl_Position = u_PMatrix * u_MVMatrix * a_Position;\
+	v_texture_coordinate = a_TexCoord;\
+}";
+
+const char * Shader::texturingFragmentString =
+"\
+varying vec4 vColor;\
+varying vec2 v_texture_coordinate;\
+uniform sampler2D my_color_texture;\
+uniform sampler2D my_lightmap_texture;\
+\
+void main(void) {\
+	gl_FragColor = vColor * texture2D(my_color_texture, v_texture_coordinate);\
+}";
+
+const char * Shader::texturingVertexString =
+"\
+uniform mat4 u_MVMatrix;\
+uniform mat4 u_PMatrix;\
+uniform vec4 u_CVector;\
+varying vec4 vColor;\
+varying vec2 v_texture_coordinate;\
+attribute vec4 a_Position;\
+attribute vec2 a_TexCoord;\
+\
+void main(void) {\
+	vColor = u_CVector;\
+	gl_Position = u_PMatrix * u_MVMatrix * a_Position;\
+	v_texture_coordinate = a_TexCoord;\
+}";
+void load_from_string(const char * s_string,int &length,char **&string, int *&stringlength) {
+	unsigned int s_len = strlen(s_string);
+	unsigned int nbline = 0;
+	for (unsigned int i = 0;i < s_len;i++) {
+		if (s_string[i] == 0 || s_string[i] == '\n') {
+			nbline++;
+		}
+	}
+
+	string = (char**)malloc(sizeof(char*)*nbline);
+	stringlength = (int*)malloc(sizeof(int)*nbline);
+	length = nbline;
+	unsigned int counter = 0;
+	for (unsigned int i = 0;i < nbline;i++) {
+		unsigned int line_length = 0;
+		unsigned int line_start = counter;
+		
+		for (;s_string[counter] != '\n' && s_string[counter] != 0;counter++) {
+			line_length++;
+		}
+		counter = line_start;
+
+		string[nbline] = (char*)malloc(sizeof(char)*line_length);
+		for (;s_string[counter] != '\n' && s_string[counter] != 0;counter++) {
+			string[nbline][counter - line_start] = s_string[counter];
+		}
+	}
+
+}
 
 void load_string(const char * filename,int &length,char **&string, int *&stringlength) {
 	char s[2048];
@@ -35,6 +159,41 @@ void load_string(const char * filename,int &length,char **&string, int *&stringl
 	}
 
 	fclose(f);
+}
+
+Shader * Shader::createBuiltin(unsigned int shaderType) {
+	switch(shaderType) {
+		case SHADER_TEXTURING:
+			if (Shader::texturingShader != NULL) {
+				return Shader::texturingShader;
+			}
+
+			Shader::texturingShader = new Shader();
+			load_from_string(texturingFragmentString,Shader::texturingShader->f_length,Shader::texturingShader->f_string,Shader::texturingShader->f_string_length);
+			load_from_string(texturingVertexString,Shader::texturingShader->v_length,Shader::texturingShader->v_string,Shader::texturingShader->v_string_length);
+			return Shader::texturingShader;
+		case SHADER_BLUR_HORIZONTAL:
+			if (Shader::blurHorizontalShader != NULL) {
+				return Shader::blurHorizontalShader;
+			}
+
+			Shader::blurHorizontalShader = new Shader();
+			load_from_string(blurHorizontalFragmentString,Shader::blurHorizontalShader->f_length,Shader::blurHorizontalShader->f_string,Shader::blurHorizontalShader->f_string_length);
+			load_from_string(blurHorizontalVertexString,Shader::blurHorizontalShader->v_length,Shader::blurHorizontalShader->v_string,Shader::blurHorizontalShader->v_string_length);
+			return Shader::blurHorizontalShader;
+		case SHADER_BLUR_VERTICAL:
+			if (Shader::blurVerticalShader != NULL) {
+				return Shader::blurVerticalShader;
+			}
+
+			Shader::blurVerticalShader = new Shader();
+			load_from_string(blurVerticalFragmentString,Shader::blurVerticalShader->f_length,Shader::blurVerticalShader->f_string,Shader::blurVerticalShader->f_string_length);
+			load_from_string(blurVerticalVertexString,Shader::blurVerticalShader->v_length,Shader::blurVerticalShader->v_string,Shader::blurVerticalShader->v_string_length);
+			return Shader::blurVerticalShader;
+		default : 
+			OutputConsole::log("Cannot create built-in shader. TYPE=%d\n",shaderType);
+			return NULL;
+	}
 }
 
 void Shader::load_fragment(const char * filename) {
@@ -120,4 +279,13 @@ void Shader::do_register() {
 	
 	this->texture0Handle = glGetUniformLocation(this->programHandle, "my_color_texture");
 	this->texture1Handle = glGetUniformLocation(this->programHandle, "my_lightmap_texture");
+}
+
+void Shader::setProjectionMatrixToOrtho(unsigned int width, unsigned int height) {
+	glm::mat4 projMat = glm::ortho( 0.f, (float)width, (float)height, 0.f, -1.f, 1.f );
+	memcpy(this->getProjectionMatrix(), glm::value_ptr(projMat),sizeof(float)*16);
+}
+
+void Shader::setModelViewMatrixToIdentity() {
+	memcpy(this->getModelViewMatrix(),glm::value_ptr(glm::mat4()),sizeof(float)*16);
 }

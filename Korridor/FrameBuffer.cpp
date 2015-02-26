@@ -3,7 +3,9 @@
 #include <GL/glew.h>
 #include "Texture.h"
 #include "Sprite.h"
+#include "Shader.h"
 #include <stdio.h>
+
 
 void FrameBuffer::bind(){
 	if (this->fb == 0) {
@@ -64,4 +66,31 @@ void FrameBuffer::draw(unsigned int width,unsigned int height) {
 	}
 
 	this->sprite->draw();
+}
+
+void FrameBuffer::blur() {
+	if (this->backFb == NULL) {
+		this->backFb = new FrameBuffer(this->width,this->height);
+	}
+
+	Shader * verticalBlurShader = Shader::createBuiltin(SHADER_BLUR_VERTICAL);
+	verticalBlurShader->setProjectionMatrixToOrtho(this->width,this->height);
+	verticalBlurShader->setModelViewMatrixToIdentity();
+	
+	verticalBlurShader->bind_attributes();
+	this->backFb->bind();
+	this->draw();
+	this->backFb->unbind(this->width,this->height);
+	verticalBlurShader->unbind();
+
+
+	Shader * horizontalBlurShader = Shader::createBuiltin(SHADER_BLUR_HORIZONTAL);
+	horizontalBlurShader->setProjectionMatrixToOrtho(this->width,this->height);
+	horizontalBlurShader->setModelViewMatrixToIdentity();
+	
+	horizontalBlurShader->bind_attributes();
+	this->bind();
+	this->backFb->draw();
+	this->unbind(this->width,this->height);
+	horizontalBlurShader->unbind();
 }

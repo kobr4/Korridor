@@ -310,12 +310,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
    /* retrieve the optimal render target resolution for each eye */
    eyeres[0] = ovrHmd_GetFovTextureSize(hmd, ovrEye_Left, hmd->DefaultEyeFov[0], 1.0);
    eyeres[1] = ovrHmd_GetFovTextureSize(hmd, ovrEye_Right, hmd->DefaultEyeFov[1], 1.0);
-    
-   /* and create a single render target texture to encompass both eyes */
-   //fb_width = eyeres[0].w + eyeres[1].w;
-   //fb_height = eyeres[0].h > eyeres[1].h ? eyeres[0].h : eyeres[1].h;
-   //update_rtarg(fb_width, fb_height);
-    
+        
    /* fill in the ovrGLTexture structures that describe our render target texture */
    for(int i=0; i<2; i++) {
     		fb_ovr_tex[i].OGL.Header.API = ovrRenderAPI_OpenGL;
@@ -384,8 +379,6 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		ovrTrackingCap_MagYawCorrection |
 		ovrTrackingCap_Position, 0);
 
-   /* disable the retarded "health and safety warning" */
-  //ovrhmd_EnableHSWDisplaySDKRender(hmd, 0);
 	UIHeader * headWidget = new UIHeader();
 	UIHeader * header1 = new UIHeader();
 	header1->setLabel("Option");
@@ -595,21 +588,6 @@ void Renderer::draw()
 	}
 	camera->Update();
 	for (int eyeid = 0;eyeid < 2;eyeid++) {
-	//this->fbDrawing->unbind(screenWidth,screenHeight);	
-
-	//this->fbDrawing->bind();
-		
-	
-
-	/*
-	this->fbDrawing->bind();
-	glClearColor(1, 1, 1, 1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-	this->fbDrawing->unbind(screenWidth,screenHeight);
-	*/
-	//GLfloat matrix[16];
-	//glGetFloatv(GL_MODELVIEW_MATRIX, matrix);
-
 	
 	glViewport((GLint) (0) + eyeid*(GLsizei) this->screenWidth/2,
 				(GLint) (0),
@@ -683,7 +661,7 @@ void Renderer::draw()
 	
 	this->shaderTexturing->bind();
 
-	memcpy(this->shaderTexturing->getModelViewMatrix(), glm::value_ptr(glm::mat4()),sizeof(float)*16);
+	this->shaderTexturing->setModelViewMatrixToIdentity();
 	this->shaderTexturing->bind_attributes();
 
 
@@ -732,9 +710,9 @@ void Renderer::draw()
 	this->fbDrawing->unbind(screenWidth,screenHeight);
 	this->shaderTexturing->bind();
 
-	glm::mat4 projMat = glm::ortho( 0.f, (float)this->screenWidth, (float)this->screenHeight, 0.f, -1.f, 1.f );
-	memcpy(this->shaderTexturing->getProjectionMatrix(), glm::value_ptr(projMat),sizeof(float)*16);
-	memcpy(this->shaderTexturing->getModelViewMatrix(), glm::value_ptr(glm::mat4()),sizeof(float)*16);
+	this->shaderTexturing->setProjectionMatrixToOrtho(this->screenWidth,this->screenHeight);
+	
+	this->shaderTexturing->setModelViewMatrixToIdentity();
 	this->shaderTexturing->bind_attributes();
 	this->fbDrawing->draw(this->screenWidth,this->screenHeight);
 	this->shaderTexturing->unbind();

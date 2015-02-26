@@ -13,6 +13,7 @@ private :
 	int height;
 	unsigned char * pixels;
 	Sprite * sprite;
+	FrameBuffer * backFb;
 public :
 	FrameBuffer(int width,int height) {
 		this->width = width;
@@ -21,6 +22,7 @@ public :
 		this->depthRb = 0;
 		this->renderTex = 0;
 		this->sprite = NULL;
+		this->backFb = NULL;
 	}
 	void bind();
 	void unbind(int screenWidth, int screenHeight);
@@ -30,4 +32,5 @@ public :
 	}
 	Texture * getTexture();
 	void draw(unsigned int width = 0,unsigned int height = 0);
+	void blur();
 };

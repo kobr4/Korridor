@@ -1,6 +1,12 @@
 #pragma once;
 
+#define SHADER_TEXTURING 1
+#define SHADER_BLUR_HORIZONTAL 2
+#define SHADER_BLUR_VERTICAL 3
+
 class Shader{
+private :
+
 	char ** f_string;
 	int * f_string_length;
 	int f_length;
@@ -18,8 +24,18 @@ class Shader{
 	float  colorVector[4];
 	int colorVectorHandle;
 	
-	
+	static const char * blurVerticalFragmentString;
+	static const char * blurVerticalVertexString;
+	static const char * blurHorizontalFragmentString;
+	static const char * blurHorizontalVertexString;
+	static const char * texturingFragmentString;
+	static const char * texturingVertexString;
+
+	static Shader * blurVerticalShader;
+	static Shader * blurHorizontalShader;
+	static Shader * texturingShader;
 public :
+
 	static int vertexPositionHandle;
 	static int texCoordHandle;
 	static int texture0Handle;
@@ -33,6 +49,7 @@ public :
 	};
 	void load_fragment(const char * filename);
 	void load_vertex(const char * filename);
+	static Shader * createBuiltin(unsigned int shaderType);
 	void bind();
 	void unbind();
 	void do_register();
@@ -40,4 +57,6 @@ public :
 	float * getModelViewMatrix() { return modelViewMatrix;};
 	float * getProjectionMatrix() { return projectionMatrix;};
 	float * getColorVector() {return colorVector;};
+	void setProjectionMatrixToOrtho(unsigned int width, unsigned int height);
+	void setModelViewMatrixToIdentity();
 };
