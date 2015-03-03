@@ -11,6 +11,7 @@
 void Renderable::draw() {
 	if (glGetError() != GL_NO_ERROR) {
 		OutputConsole::log("Renderable::draw() : An error occured before draw.");
+		exit(0);
 	}
 
 	if (this->texture != NULL) {

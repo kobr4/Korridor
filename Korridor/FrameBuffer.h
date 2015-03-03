@@ -32,5 +32,5 @@ public :
 	}
 	Texture * getTexture();
 	void draw(unsigned int width = 0,unsigned int height = 0);
-	void blur();
+	void blur(unsigned int screenWidth,unsigned int screenHeight);
 };

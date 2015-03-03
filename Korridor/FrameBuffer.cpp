@@ -68,29 +68,41 @@ void FrameBuffer::draw(unsigned int width,unsigned int height) {
 	this->sprite->draw();
 }
 
-void FrameBuffer::blur() {
+void FrameBuffer::blur(unsigned int screenWidth,unsigned int screenHeight) {
 	if (this->backFb == NULL) {
 		this->backFb = new FrameBuffer(this->width,this->height);
+		this->backFb->do_register();
 	}
-
+	
 	Shader * verticalBlurShader = Shader::createBuiltin(SHADER_BLUR_VERTICAL);
-	verticalBlurShader->setProjectionMatrixToOrtho(this->width,this->height);
+	//Shader * verticalBlurShader = Shader::createBuiltin(SHADER_TEXTURING);
+	verticalBlurShader->setProjectionMatrixToOrtho(screenWidth,screenHeight);
 	verticalBlurShader->setModelViewMatrixToIdentity();
 	
-	verticalBlurShader->bind_attributes();
+	verticalBlurShader->bind();
+	
 	this->backFb->bind();
-	this->draw();
-	this->backFb->unbind(this->width,this->height);
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+	this->draw(screenWidth,screenHeight);
+	this->backFb->unbind(screenWidth,screenHeight);
+	
 	verticalBlurShader->unbind();
-
+	
 
 	Shader * horizontalBlurShader = Shader::createBuiltin(SHADER_BLUR_HORIZONTAL);
-	horizontalBlurShader->setProjectionMatrixToOrtho(this->width,this->height);
+	
+	
+	//Shader * horizontalBlurShader = Shader::createBuiltin(SHADER_TEXTURING);
+	horizontalBlurShader->setProjectionMatrixToOrtho(screenWidth,screenHeight);
 	horizontalBlurShader->setModelViewMatrixToIdentity();
 	
-	horizontalBlurShader->bind_attributes();
+	horizontalBlurShader->bind();
 	this->bind();
-	this->backFb->draw();
-	this->unbind(this->width,this->height);
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+	this->backFb->draw(screenWidth,screenHeight);
+	this->unbind(screenWidth,screenHeight);
 	horizontalBlurShader->unbind();
+	
 }

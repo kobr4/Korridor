@@ -18,18 +18,20 @@ Shader * Shader::blurVerticalShader = NULL;
 Shader * Shader::texturingShader= NULL;
 
 const char * Shader::blurVerticalFragmentString =
-"varying vec4 vColor; \
+"\
+varying vec4 vColor;\
 varying vec2 v_texture_coordinate;\
 uniform sampler2D my_color_texture;\
-\
+uniform sampler2D my_lightmap_texture;\
 float offset = 0.004;\
+\
 void main(void) {\
-	gl_FragColor = (\
+	gl_FragColor = vColor * (\
 	texture2D(my_color_texture, v_texture_coordinate)\
 	+ texture2D(my_color_texture, v_texture_coordinate - vec2(0.0,offset))\
 	+ texture2D(my_color_texture, v_texture_coordinate + vec2(0.0,offset))\
 	+ texture2D(my_color_texture, v_texture_coordinate - vec2(0.0,offset*2))\
-	+ texture2D(my_color_texture, v_texture_coordinate + vec2(0.0,offset*2));\
+	+ texture2D(my_color_texture, v_texture_coordinate + vec2(0.0,offset*2))\
 	) / 5.0;\
 }";
 const char * Shader::blurVerticalVertexString =
@@ -48,13 +50,15 @@ void main(void) {\
 	v_texture_coordinate = a_TexCoord;\
 }";
 const char * Shader::blurHorizontalFragmentString =
-"varying vec4 vColor;\
+"\
+varying vec4 vColor;\
 varying vec2 v_texture_coordinate;\
 uniform sampler2D my_color_texture;\
+uniform sampler2D my_lightmap_texture;\
 float offset = 0.004;\
 \
 void main(void) {\
-	gl_FragColor = (\
+	gl_FragColor = vColor * (\
 	texture2D(my_color_texture, v_texture_coordinate)\
 	+ texture2D(my_color_texture, v_texture_coordinate - vec2(offset,0.0))\
 	+ texture2D(my_color_texture, v_texture_coordinate + vec2(offset,0.0))\
@@ -107,7 +111,7 @@ void main(void) {\
 void load_from_string(const char * s_string,int &length,char **&string, int *&stringlength) {
 	unsigned int s_len = strlen(s_string);
 	unsigned int nbline = 0;
-	for (unsigned int i = 0;i < s_len;i++) {
+	for (unsigned int i = 0;i <= s_len;i++) {
 		if (s_string[i] == 0 || s_string[i] == '\n') {
 			nbline++;
 		}
@@ -126,10 +130,13 @@ void load_from_string(const char * s_string,int &length,char **&string, int *&st
 		}
 		counter = line_start;
 
-		string[nbline] = (char*)malloc(sizeof(char)*line_length);
+		string[i] = (char*)malloc(sizeof(char)*(line_length+1));
+		stringlength[i] = line_length+1;
 		for (;s_string[counter] != '\n' && s_string[counter] != 0;counter++) {
-			string[nbline][counter - line_start] = s_string[counter];
+			string[i][counter - line_start] = s_string[counter];
 		}
+
+		string[i][line_length] = 0;
 	}
 
 }
@@ -180,6 +187,7 @@ Shader * Shader::createBuiltin(unsigned int shaderType) {
 			Shader::blurHorizontalShader = new Shader();
 			load_from_string(blurHorizontalFragmentString,Shader::blurHorizontalShader->f_length,Shader::blurHorizontalShader->f_string,Shader::blurHorizontalShader->f_string_length);
 			load_from_string(blurHorizontalVertexString,Shader::blurHorizontalShader->v_length,Shader::blurHorizontalShader->v_string,Shader::blurHorizontalShader->v_string_length);
+			
 			return Shader::blurHorizontalShader;
 		case SHADER_BLUR_VERTICAL:
 			if (Shader::blurVerticalShader != NULL) {

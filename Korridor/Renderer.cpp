@@ -46,7 +46,7 @@
 
 #include "UIWidget.h"
 
-#define OVR
+//#define OVR
 #define OVR_OS_WIN32
 /*
 #ifdef WIN32
@@ -98,6 +98,7 @@ static unsigned int hmd_caps;
 SDL_Joystick * g_joystick = NULL; // on crée le joystick
 bool g_collision_detection = true;
 bool g_cullface = true;
+bool g_postprocess = true;
 
 T_SPACE_OBJECT * spaceObjectArray = NULL;
 unsigned int spaceCount = 0;
@@ -141,6 +142,10 @@ void func_bool_collision_change_cb(bool newState, void * data) {
 
 void func_bool_cullface_change_cb(bool newState, void * data) {
 	g_cullface = newState;
+}
+
+void func_bool_postprocess_change_cb(bool newState, void * data) {
+	g_postprocess = newState;
 }
 
 void func_exit_cb(void * data) {
@@ -236,9 +241,17 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	this->textSurface = SDL_CreateRGBSurface( 0, this->screenWidth, this->screenHeight, 32, rmask, gmask, bmask, amask);
 	bExit = false;
 
+	/*
 	shaderTexturing = new Shader();
 	shaderTexturing->load_fragment("fragment_texturing.gl");
 	shaderTexturing->load_vertex("vertex.gl");
+	*/
+
+	shaderLightmapTexturing = new Shader();
+	shaderLightmapTexturing->load_fragment("fragment_lightmap_texturing.gl");
+	shaderLightmapTexturing->load_vertex("vertex.gl");
+
+	shaderTexturing = Shader::createBuiltin(SHADER_TEXTURING);
 
 	//Texture * texture = new Texture(2,2,(unsigned char*)g_texdata);
 	//this->spriteDrawing = new Sprite(texture,100.f,100.f,0,0,1,1);
@@ -398,6 +411,11 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		headerBoolean2->setOnBoolChangeCallback(func_bool_cullface_change_cb,NULL);
 		header1->addChild(headerBoolean2);
 
+		UIBoolean * headerBoolean3 = new UIBoolean();
+		headerBoolean3->setLabel("Post-processing");
+		headerBoolean3->setOnBoolChangeCallback(func_bool_postprocess_change_cb,NULL);
+		header1->addChild(headerBoolean3);
+
 		UIHeader * headerOptionBack = new UIHeader();
 		headerOptionBack->setLabel("Back");
 		headerOptionBack->setOnClickCallback(&func_back_cb,headerOptionBack);
@@ -536,7 +554,7 @@ void Renderer::draw()
 	SDL_FillRect(this->textSurface, NULL, 0x000000);
 
 	if (this->fbHalfRes == NULL){ 
-		this->fbHalfRes = new FrameBuffer(this->screenWidth / 4,this->screenHeight / 4);
+		this->fbHalfRes = new FrameBuffer(this->screenWidth / 8,this->screenHeight / 8);
 		this->fbHalfRes->do_register();
 	}
 
@@ -640,38 +658,78 @@ void Renderer::draw()
 	memcpy(g_shader_debug->getModelViewMatrix(),glm::value_ptr(V),sizeof(float)*16);
 	
 	g_shader_debug->bind();
-	g_shader_debug->bind_attributes();
+	//g_shader_debug->bind_attributes();
 
 
 	for (unsigned int i = 0;i < g_renderableList.size();i++) {
 		g_renderableList[i]->draw();
 	}
 	
+	/*
 	M = glm::mat4();
 	M = glm::translate(glm::vec3(22.0f,4.0f,61.0f));
 	memcpy(g_shader_debug->getModelViewMatrix(),glm::value_ptr(V*M),sizeof(float)*16);
 	g_shader_debug->bind_attributes();
 	sphereRenderable->draw();
-	
+	*/
 	g_shader_debug->unbind();
+	
+	
+	this->fbDrawing->unbind(screenWidth/2,screenHeight);
 
+	//Post process
+	if (g_postprocess) {
+
+		camera->GetMatricies(P,V,M);
+		if (eyeid == 0) {
+			V = camera->TranslateToEye(-0.5f);
+		} else {
+			V = camera->TranslateToEye(0.5f);
+		}
+
+		this->fbHalfRes->bind();
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+		memcpy(shaderLightmapTexturing->getProjectionMatrix(),glm::value_ptr(P),sizeof(float)*16);
+
+		memcpy(shaderLightmapTexturing->getModelViewMatrix(),glm::value_ptr(V*M),sizeof(float)*16);
+		shaderLightmapTexturing->bind();
+
+
+		for (unsigned int i = 0;i < g_renderableList.size();i++) {
+			g_renderableList[i]->draw();
+		}
+	
+
+		shaderLightmapTexturing->unbind();
+
+		this->fbHalfRes->unbind(this->screenWidth,this->screenHeight);
+		for (int i = 0;i < 4;i++) {
+			this->fbHalfRes->blur(screenWidth,screenHeight);
+		}
+	}
+
+	//Post process end
+	this->fbDrawing->bind();
+	glViewport((GLint) (0) + eyeid*(GLsizei) this->screenWidth/2,
+				(GLint) (0),
+				(GLsizei) this->screenWidth/2,
+				(GLsizei) this->screenHeight);
+	
+	
 	
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
-	
-	this->shaderTexturing->bind();
-
-	this->shaderTexturing->setModelViewMatrixToIdentity();
-	this->shaderTexturing->bind_attributes();
-
-
-	/*
-	fbHalfRes->bind();
-	this->shaderTexturing->bind();
-
-	fbHalfRes->unbind(this->screenWidth,this->screenHeight);
-	*/
 	glDisable(GL_DEPTH_TEST);
+	
+	this->shaderTexturing->setProjectionMatrixToOrtho(this->screenWidth,this->screenHeight);
+	this->shaderTexturing->setModelViewMatrixToIdentity();
+	this->shaderTexturing->bind();
+	
+	if (g_postprocess) {
+		this->fbHalfRes->draw(screenWidth,screenHeight);	
+	}
 
 
 
@@ -708,13 +766,28 @@ void Renderer::draw()
 	}
 
 	this->fbDrawing->unbind(screenWidth,screenHeight);
+
+	/*
+	this->fbHalfRes->blur(screenWidth,screenHeight);
+	this->fbHalfRes->blur(screenWidth,screenHeight);
+
 	this->shaderTexturing->bind();
 
 	this->shaderTexturing->setProjectionMatrixToOrtho(this->screenWidth,this->screenHeight);
 	
 	this->shaderTexturing->setModelViewMatrixToIdentity();
 	this->shaderTexturing->bind_attributes();
-	this->fbDrawing->draw(this->screenWidth,this->screenHeight);
+	
+	this->fbHalfRes->draw(this->screenWidth,this->screenHeight);
+	
+	
+	this->shaderTexturing->unbind();
+	*/
+	this->shaderTexturing->bind();
+	this->shaderTexturing->setProjectionMatrixToOrtho(this->screenWidth,this->screenHeight);
+	this->shaderTexturing->setModelViewMatrixToIdentity();
+	this->shaderTexturing->bind_attributes();
+	this->fbDrawing->draw(screenWidth,screenHeight);
 	this->shaderTexturing->unbind();
 
 	#ifndef OVR
@@ -865,7 +938,7 @@ void Renderer::loop()
 		
 		this->draw();
 
-		SDL_Delay(10);
+		//SDL_Delay(10);
 	}
 
     

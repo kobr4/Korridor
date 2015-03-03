@@ -80,6 +80,7 @@ private :
 	FrameBuffer * fbHalfRes;
 
 	Shader * shaderTexturing;
+	Shader * shaderLightmapTexturing;
 
 	Sprite * spriteDummy;
 
