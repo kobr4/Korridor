@@ -5,6 +5,7 @@
 #include "Sprite.h"
 #include "Shader.h"
 #include <stdio.h>
+#include "TextureGenerator.h"
 
 
 void FrameBuffer::bind(){
@@ -75,7 +76,6 @@ void FrameBuffer::blur(unsigned int screenWidth,unsigned int screenHeight) {
 	}
 	
 	Shader * verticalBlurShader = Shader::createBuiltin(SHADER_BLUR_VERTICAL);
-	//Shader * verticalBlurShader = Shader::createBuiltin(SHADER_TEXTURING);
 	verticalBlurShader->setProjectionMatrixToOrtho(screenWidth,screenHeight);
 	verticalBlurShader->setModelViewMatrixToIdentity();
 	
@@ -92,8 +92,6 @@ void FrameBuffer::blur(unsigned int screenWidth,unsigned int screenHeight) {
 
 	Shader * horizontalBlurShader = Shader::createBuiltin(SHADER_BLUR_HORIZONTAL);
 	
-	
-	//Shader * horizontalBlurShader = Shader::createBuiltin(SHADER_TEXTURING);
 	horizontalBlurShader->setProjectionMatrixToOrtho(screenWidth,screenHeight);
 	horizontalBlurShader->setModelViewMatrixToIdentity();
 	
@@ -105,4 +103,11 @@ void FrameBuffer::blur(unsigned int screenWidth,unsigned int screenHeight) {
 	this->unbind(screenWidth,screenHeight);
 	horizontalBlurShader->unbind();
 	
+}
+
+void FrameBuffer::writeToTGA(char * filename) {
+	unsigned char * map = (unsigned char *)malloc(sizeof(unsigned char) * 4 * width * height);
+	glReadPixels(0,0,width,height,GL_RGBA,GL_UNSIGNED_BYTE,map);
+	TextureGenerator::writeTGA(filename, map, width, height, true);
+	free(map);
 }

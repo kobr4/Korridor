@@ -241,11 +241,6 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	this->textSurface = SDL_CreateRGBSurface( 0, this->screenWidth, this->screenHeight, 32, rmask, gmask, bmask, amask);
 	bExit = false;
 
-	/*
-	shaderTexturing = new Shader();
-	shaderTexturing->load_fragment("fragment_texturing.gl");
-	shaderTexturing->load_vertex("vertex.gl");
-	*/
 
 	shaderLightmapTexturing = new Shader();
 	shaderLightmapTexturing->load_fragment("fragment_lightmap_texturing.gl");
@@ -253,17 +248,10 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 
 	shaderTexturing = Shader::createBuiltin(SHADER_TEXTURING);
 
-	//Texture * texture = new Texture(2,2,(unsigned char*)g_texdata);
-	//this->spriteDrawing = new Sprite(texture,100.f,100.f,0,0,1,1);
 	Texture * textSurfaceTexture = new Texture(this->screenWidth,this->screenHeight,(unsigned char*)this->textSurface->pixels);
 	this->spriteTextSurface = new Sprite(textSurfaceTexture,(float)this->screenWidth,(float)this->screenHeight,0,1,1,0);
 	this->fbDrawing = NULL;
 	this->fbHalfRes = NULL;
-
-	//Texture * checker_texture = new Texture(2,2,(unsigned char*)g_checker_texdata);
-
-
-	//unsigned int triangleCount = 0;
 
 	
 
@@ -290,6 +278,9 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	camera->SetClipping(0.1f,200.f);
 	camera->SetPosition(glm::vec3(14.7f,1.9f,57.5f));
 	//camera->SetLookAt(glm::vec3(35.3f,7.0f,46.6f));
+
+
+	
 	for (int i = 0;i < 25;i++) {
 		camera->ChangePitch(1.f);
 		camera->Update();
@@ -299,6 +290,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		camera->ChangeHeading(1.f);
 		camera->Update();
 	}
+	
 	//camera->ChangeHeading(90.f);
 	
 
@@ -561,8 +553,6 @@ void Renderer::draw()
 	if (this->fbDrawing == NULL){ 
 		this->fbDrawing = new FrameBuffer(this->screenWidth,this->screenHeight);
 		this->fbDrawing->do_register();
-		//this->spriteDrawing = new Sprite(this->fbDrawing->getTexture(),(float)this->screenWidth,(float)this->screenHeight,0,0,1,1);		
-
 		#ifdef OVR
 		for(int i=0; i<2; i++) {
 			fb_ovr_tex[i].OGL.TexId = this->fbDrawing->getTextureId();	/* both eyes will use the same texture id */
@@ -870,7 +860,14 @@ void Renderer::loop()
 								//bExit = true;
 								UIWidget::currentWidget->setActive(true);
 								break;
-
+							case SDLK_p:
+								this->fbDrawing->bind();
+								this->fbDrawing->writeToTGA("fbDrawing.tga");
+								this->fbDrawing->unbind(screenWidth,screenHeight);
+								this->fbHalfRes->bind();
+								this->fbHalfRes->writeToTGA("fbHalfRes.tga");
+								this->fbHalfRes->unbind(screenWidth,screenHeight);
+								break;
 							default:
 								break;
 						}
