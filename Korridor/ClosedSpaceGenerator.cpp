@@ -677,7 +677,7 @@ void ClosedSpaceGenerator::generateSpace(float dimension, float unit_distance, T
 	for (int i = 0;i < istep_count * istep_count;i++) {
 		g_maze_grid[i] = false;
 	}
-	printf("nb_step=%d\n",istep_count);
+	//printf("nb_step=%d\n",istep_count);
 	
 	digRoom(50,istep_count);
 	

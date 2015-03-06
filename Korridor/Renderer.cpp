@@ -46,7 +46,7 @@
 
 #include "UIWidget.h"
 
-//#define OVR
+#define OVR
 #define OVR_OS_WIN32
 /*
 #ifdef WIN32
@@ -63,7 +63,7 @@
 #include <OVR_CAPI.h>
 #include <OVR_CAPI_GL.h>
 
-const float Renderer::hudScale = 0.75f;
+const float Renderer::hudScale = 0.68f;
 
 unsigned char g_texdata[]= { 255, 255, 255, 255, 255, 255, 255, 255,
 							255, 255, 255, 255, 255, 255, 255, 255};
@@ -99,6 +99,7 @@ SDL_Joystick * g_joystick = NULL; // on crée le joystick
 bool g_collision_detection = true;
 bool g_cullface = true;
 bool g_postprocess = true;
+volatile bool g_asyncload = false;
 
 T_SPACE_OBJECT * spaceObjectArray = NULL;
 unsigned int spaceCount = 0;
@@ -116,7 +117,6 @@ bool collide(T_SPACE_OBJECT * objectArray,unsigned int objectCount,glm::vec3 pos
 				if (glm::intersectRayTriangle(position,heading, p1,p2,p3,intersec)) {
 					glm::vec3 intersec_pos = p1 * (1 - intersec.x - intersec.y) + p2 * intersec.x + p3 * intersec.y;
 					if (glm::distance(position, intersec_pos) < 2.0f) {
-						//printf("Distance = %f %d\n",glm::distance(position, intersec_pos),counter/15);
 						return true;
 					}
 				}				
@@ -161,6 +161,34 @@ void func_back_cb(void * data) {
 	}
 
 }
+
+void Renderer::initializeContent() {
+
+	ClosedSpaceGenerator::generateSpace(100.f,10.f,&spaceObjectArray,&spaceCount,1024,256);
+	OutputConsole::log("Generated space : space count = %d\n",spaceCount);
+
+	
+	for (unsigned int i = 0;i < spaceCount;i++) {
+		Renderable * renderable = Renderable::createRenderable(g_shader_debug, spaceObjectArray[i].texture, spaceObjectArray[i].triangleArray, spaceObjectArray[i].triangleCount);
+		renderable->setSecondaryTexture(spaceObjectArray[i].lightMapTexture);
+		g_renderableList.push_back(renderable);
+	}
+
+	T_SPACE_OBJECT sphereSpace;
+	ClosedSpaceGenerator::generateSphere(&sphereSpace,0.25f,5);
+	sphereRenderable =  Renderable::createRenderable(g_shader_debug, sphereSpace.texture, sphereSpace.triangleArray, sphereSpace.triangleCount);
+	sphereRenderable->setSecondaryTexture(sphereSpace.texture);
+
+	g_asyncload = true;
+}
+
+static int AsyncInitThread(void *ptr)
+{
+	Renderer * renderer = (Renderer*)ptr;
+	renderer->initializeContent();
+	return 0;
+}
+
 
 void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fullscreen)
 {
@@ -253,26 +281,10 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	this->fbDrawing = NULL;
 	this->fbHalfRes = NULL;
 
-	
-
-	ClosedSpaceGenerator::generateSpace(100.f,10.f,&spaceObjectArray,&spaceCount,1024,256);
-	printf("Generated space : space count = %d\n",spaceCount);
-
 	g_shader_debug = new Shader();
 	g_shader_debug->load_fragment("fragment_debug.gl");
 	g_shader_debug->load_vertex("vertex.gl");
 
-	
-	for (unsigned int i = 0;i < spaceCount;i++) {
-		Renderable * renderable = Renderable::createRenderable(g_shader_debug, spaceObjectArray[i].texture, spaceObjectArray[i].triangleArray, spaceObjectArray[i].triangleCount);
-		renderable->setSecondaryTexture(spaceObjectArray[i].lightMapTexture);
-		g_renderableList.push_back(renderable);
-	}
-	
-	T_SPACE_OBJECT sphereSpace;
-	ClosedSpaceGenerator::generateSphere(&sphereSpace,0.25f,5);
-	sphereRenderable =  Renderable::createRenderable(g_shader_debug, sphereSpace.texture, sphereSpace.triangleArray, sphereSpace.triangleCount);
-	sphereRenderable->setSecondaryTexture(sphereSpace.texture);
 
 	camera = new Camera();
 	camera->SetClipping(0.1f,200.f);
@@ -290,9 +302,6 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		camera->ChangeHeading(1.f);
 		camera->Update();
 	}
-	
-	//camera->ChangeHeading(90.f);
-	
 
 	OutputConsole::setRenderer(this);
 
@@ -332,7 +341,6 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
    /* fill in the ovrGLConfig structure needed by the SDK to draw our stereo pair
 	* to the actual HMD display (SDK-distortion mode)
 	*/
-   
    memset(&glcfg, 0, sizeof glcfg);
    glcfg.OGL.Header.API = ovrRenderAPI_OpenGL;
    glcfg.OGL.Header.BackBufferSize = hmd->Resolution;
@@ -423,7 +431,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 
 	UIWidget::currentWidget = headWidget;
 
-
+	asyncInitThread = SDL_CreateThread(AsyncInitThread, "AsyncInitThread", (void *)this);
 }
 
 
@@ -586,7 +594,7 @@ void Renderer::draw()
 	}
 	#endif
 	
-	if (g_collision_detection) {
+	if (g_collision_detection && g_asyncload) {
 		if (collide(spaceObjectArray,spaceCount,camera->getPosition(), camera->getMotionHeading())) {
 			camera->resetMotionHeading();
 			this->drawMessage("Collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
@@ -651,7 +659,7 @@ void Renderer::draw()
 	//g_shader_debug->bind_attributes();
 
 
-	for (unsigned int i = 0;i < g_renderableList.size();i++) {
+	for (unsigned int i = 0;i < g_renderableList.size() && g_asyncload;i++) {
 		g_renderableList[i]->draw();
 	}
 	
@@ -668,7 +676,7 @@ void Renderer::draw()
 	this->fbDrawing->unbind(screenWidth/2,screenHeight);
 
 	//Post process
-	if (g_postprocess) {
+	if (g_postprocess && g_asyncload) {
 
 		camera->GetMatricies(P,V,M);
 		if (eyeid == 0) {
@@ -717,7 +725,7 @@ void Renderer::draw()
 	this->shaderTexturing->setModelViewMatrixToIdentity();
 	this->shaderTexturing->bind();
 	
-	if (g_postprocess) {
+	if (g_postprocess && g_asyncload) {
 		this->fbHalfRes->draw(screenWidth,screenHeight);	
 	}
 
@@ -731,7 +739,7 @@ void Renderer::draw()
 	this->drawMessage(s,RendererTextAlign::ALIGNRIGHT,RendererTextAlign::ALIGNBOTTOM);
 
 
-	this->drawMessage("BOTTOMLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);
+	//this->drawMessage("BOTTOMLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);
 
 	if (UIWidget::currentWidget->isActive()){
 		UIWidget::currentWidget->drawChilds(this);
@@ -757,22 +765,6 @@ void Renderer::draw()
 
 	this->fbDrawing->unbind(screenWidth,screenHeight);
 
-	/*
-	this->fbHalfRes->blur(screenWidth,screenHeight);
-	this->fbHalfRes->blur(screenWidth,screenHeight);
-
-	this->shaderTexturing->bind();
-
-	this->shaderTexturing->setProjectionMatrixToOrtho(this->screenWidth,this->screenHeight);
-	
-	this->shaderTexturing->setModelViewMatrixToIdentity();
-	this->shaderTexturing->bind_attributes();
-	
-	this->fbHalfRes->draw(this->screenWidth,this->screenHeight);
-	
-	
-	this->shaderTexturing->unbind();
-	*/
 	this->shaderTexturing->bind();
 	this->shaderTexturing->setProjectionMatrixToOrtho(this->screenWidth,this->screenHeight);
 	this->shaderTexturing->setModelViewMatrixToIdentity();

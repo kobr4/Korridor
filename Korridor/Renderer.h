@@ -55,7 +55,7 @@ class Renderer
 {
 public :
 	void init(unsigned int screenWidth, unsigned int screenHeight, bool fullscreen);
-
+	void initializeContent();
 	void loop();
 	void draw();
 	bool exitstate();
@@ -71,6 +71,7 @@ public :
 
 	void setExitState();
 private :
+	SDL_Thread * asyncInitThread;
 	static const float hudScale;
 	unsigned int screenHeight;
 	unsigned int screenWidth;

@@ -187,6 +187,7 @@ Texture * TextureGenerator::generateLightmapTextureWithOcclusion(unsigned int wi
 		}
 	}
 	OutputConsole::log("Lightmap generated for quad: %d\n",quadToIgnore);
+	OutputConsole::toast(2000,"Lightmap generation: %d%%",100*quadToIgnore/quadArraySize);
 	return new Texture(width,height,(unsigned char*)texture_data);
 }
 

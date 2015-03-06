@@ -38,4 +38,19 @@ void OutputConsole::render() {
 	for (int i = 0;i < 4;i++) {
 		OutputConsole::outputConsole->renderer->drawMessage(OutputConsole::outputConsole->sBuffer[i],0, i * 20);
 	}
+
+	if (SDL_GetTicks() < OutputConsole::outputConsole->toastDelay) {
+		OutputConsole::outputConsole->renderer->drawMessage(OutputConsole::outputConsole->sToatBuffer,RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);
+	}
+}
+
+void OutputConsole::toast(unsigned int delayms,const char * message,...) {
+	char s[1024];
+	s[0] = 0;
+	va_list argptr;
+	va_start(argptr, message);
+	vsprintf(s, message, argptr);
+	va_end(argptr);	
+	strcpy(OutputConsole::outputConsole->sToatBuffer,s);
+	OutputConsole::outputConsole->toastDelay = SDL_GetTicks() + delayms;
 }
