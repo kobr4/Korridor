@@ -2,6 +2,8 @@
 #include "camera.h"
 using namespace std;
 
+const int Camera::deadzone = 400;
+
 Camera::Camera() {
 	camera_mode = FREE;
 	camera_up = glm::vec3(0, 1, 0);
@@ -11,6 +13,11 @@ Camera::Camera() {
 	max_pitch_rate = 5;
 	max_heading_rate = 5;
 	move_camera = false;
+
+	xjaxis = 0;
+	yjaxis = 0;
+	zjaxis = 0;
+	wjaxis = 0;
 }
 Camera::~Camera() {
 }
@@ -29,6 +36,8 @@ void Camera::resetMotionHeading() {
 }
 
 void Camera::Update() {
+	this->UpdateInput();
+
 	camera_direction = glm::normalize(camera_look_at - camera_position);
 	//need to set the matrix state. this is only important because lighting doesn't work if this isn't done
 	//glViewport(viewport_x, viewport_y, window_width, window_height);
@@ -231,4 +240,70 @@ void Camera::GetMatricies(glm::mat4 &P, glm::mat4 &V, glm::mat4 &M) {
 
 glm::vec3 Camera::getPosition() {
 	return camera_position;
+}
+
+void Camera::UpdateInput() {
+
+	if (xjaxis < -deadzone) {
+		this->Move(CameraDirection::LEFT, -(float)(xjaxis)/32768.f);
+	} else if (xjaxis > deadzone){
+		this->Move(CameraDirection::RIGHT, (float)(xjaxis)/32768.f);
+	}
+
+	if (yjaxis < -deadzone) {
+		this->Move(CameraDirection::FORWARD, -(float)(yjaxis)/32768.f);
+	} else if (yjaxis > deadzone){
+		this->Move(CameraDirection::BACK, (float)(yjaxis)/32768.f);
+	}
+
+	if (zjaxis != 0 && wjaxis != 0) {
+		this->Move2DJoy(zjaxis/500,wjaxis/500);
+	}
+}
+
+void Camera::handleEvent(SDL_Event event) {
+	switch( event.type )
+	{
+		case SDL_KEYDOWN:
+			switch( event.key.keysym.sym )
+			{
+				case SDLK_SPACE :
+					break;
+				case SDLK_UP:
+					this->Move(CameraDirection::FORWARD);
+					break;
+				case SDLK_DOWN:
+					this->Move(CameraDirection::BACK);
+					break;
+				case SDLK_LEFT:
+					this->Move(CameraDirection::LEFT);
+					break;
+				case SDLK_RIGHT:
+					this->Move(CameraDirection::RIGHT);
+					break;
+				default:
+					break;
+			}
+		break;
+		case SDL_MOUSEMOTION:
+			this->Move2D(event.motion.x,event.motion.y);
+			break;
+		case SDL_JOYAXISMOTION:
+			if (event.jaxis.axis == 0) {
+				xjaxis = event.jaxis.value / 10;
+			}
+
+			if (event.jaxis.axis == 1) {
+				yjaxis = event.jaxis.value / 10;
+			}
+
+			if (event.jaxis.axis == 2) {
+				zjaxis = event.jaxis.value / 10;
+			}
+
+			if (event.jaxis.axis == 3) {
+				wjaxis = event.jaxis.value / 10;
+			}
+			break;
+	}               
 }

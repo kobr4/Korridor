@@ -216,7 +216,7 @@ void Shader::bind_attributes() {
 	glUniformMatrix4fv(this->modelViewMatrixHandle, 1, 0,this->modelViewMatrix);
 	glUniformMatrix4fv(this->projectionMatrixHandle, 1, 0,this->projectionMatrix);
 	glUniform4fv(this->colorVectorHandle,1,this->colorVector);
-	glUniform1i(this->texture0Handle,0);
+	//glUniform1i(this->texture0Handle,0);
 	glUniform1i(this->texture1Handle,1);
 }
 

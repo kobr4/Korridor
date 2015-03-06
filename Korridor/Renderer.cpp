@@ -43,7 +43,7 @@
 #include "ClosedSpaceGenerator.h"
 #include "OutputConsole.h"
 #include "TextureGenerator.h"
-
+#include <time.h>       /* time */
 #include "UIWidget.h"
 
 #define OVR
@@ -83,8 +83,8 @@ Renderable * sphereRenderable;
 Shader * g_shader_debug;
 float * g_vertexBuffer = NULL;
 
-static unsigned int fbo, fb_tex, fb_depth;
 static int fb_width, fb_height;
+static unsigned int fbo, fb_tex, fb_depth;
 static int fb_tex_width, fb_tex_height;
 
 static ovrHmd hmd;
@@ -104,7 +104,7 @@ volatile bool g_asyncload = false;
 T_SPACE_OBJECT * spaceObjectArray = NULL;
 unsigned int spaceCount = 0;
 
-bool collide(T_SPACE_OBJECT * objectArray,unsigned int objectCount,glm::vec3 position, glm::vec3 heading) {
+bool collide(T_SPACE_OBJECT * objectArray,unsigned int objectCount,glm::vec3 position, glm::vec3 heading, glm::vec3 &intersection) {
 	glm::vec3 intersec;
 	for (int i = 0;i < objectCount;i++) {
 		float * vertices = objectArray[i].triangleArray;
@@ -117,6 +117,7 @@ bool collide(T_SPACE_OBJECT * objectArray,unsigned int objectCount,glm::vec3 pos
 				if (glm::intersectRayTriangle(position,heading, p1,p2,p3,intersec)) {
 					glm::vec3 intersec_pos = p1 * (1 - intersec.x - intersec.y) + p2 * intersec.x + p3 * intersec.y;
 					if (glm::distance(position, intersec_pos) < 2.0f) {
+						intersection = intersec_pos;
 						return true;
 					}
 				}				
@@ -163,6 +164,8 @@ void func_back_cb(void * data) {
 }
 
 void Renderer::initializeContent() {
+	/* initialize random seed: */
+	srand (time(NULL));
 
 	ClosedSpaceGenerator::generateSpace(100.f,10.f,&spaceObjectArray,&spaceCount,1024,256);
 	OutputConsole::log("Generated space : space count = %d\n",spaceCount);
@@ -595,8 +598,11 @@ void Renderer::draw()
 	#endif
 	
 	if (g_collision_detection && g_asyncload) {
-		if (collide(spaceObjectArray,spaceCount,camera->getPosition(), camera->getMotionHeading())) {
+		glm::vec3 intersection = glm::vec3();
+		if (collide(spaceObjectArray,spaceCount,camera->getPosition(), camera->getMotionHeading(),intersection)) {
 			camera->resetMotionHeading();
+			//camera->SetPosition(intersection);
+			//camera->Update();
 			this->drawMessage("Collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
 		} else {
 			this->drawMessage("No collision",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNTOP);
@@ -729,10 +735,6 @@ void Renderer::draw()
 		this->fbHalfRes->draw(screenWidth,screenHeight);	
 	}
 
-
-
-
-
 	char s[1024];
 	glm::vec3 cam_pos = camera->getPosition();
 	sprintf(s,"Pos: %.1f %.1f %.1f",cam_pos[0],cam_pos[1],cam_pos[2]);
@@ -787,13 +789,6 @@ void Renderer::loop()
 	T_EFFECT effect;
 	int told = SDL_GetTicks();
 
-
-	int xjaxis = 0;
-	int yjaxis = 0;
-	int zjaxis = 0;
-	int wjaxis = 0;
-	const int deadzone = 400;
-
 	while (!bExit)
 	{
 		frameCounter++;
@@ -805,51 +800,18 @@ void Renderer::loop()
 			this->fps = 1000/dt;
 
 
-
-
-		if (xjaxis < -deadzone) {
-			camera->Move(CameraDirection::LEFT, -(float)(xjaxis)/32768.f);
-		} else if (xjaxis > deadzone){
-			camera->Move(CameraDirection::RIGHT, (float)(xjaxis)/32768.f);
-		}
-
-		if (yjaxis < -deadzone) {
-			camera->Move(CameraDirection::FORWARD, -(float)(yjaxis)/32768.f);
-		} else if (yjaxis > deadzone){
-			camera->Move(CameraDirection::BACK, (float)(yjaxis)/32768.f);
-		}
-
-
-		if (zjaxis != 0 && wjaxis != 0) {
-			camera->Move2DJoy(zjaxis/500,wjaxis/500);
-		}
-
 		while( SDL_PollEvent( &event ) )
 		{
 			if (UIWidget::currentWidget->isActive()) {
 				UIWidget::currentWidget->handleEvent(event);
 			} else {
+				camera->handleEvent(event);
 				switch( event.type )
 				{
 					case SDL_KEYDOWN:
 						switch( event.key.keysym.sym )
 						{
-							case SDLK_SPACE :
-								break;
-							case SDLK_UP:
-								camera->Move(CameraDirection::FORWARD);
-								break;
-							case SDLK_DOWN:
-								camera->Move(CameraDirection::BACK);
-								break;
-							case SDLK_LEFT:
-								camera->Move(CameraDirection::LEFT);
-								break;
-							case SDLK_RIGHT:
-								camera->Move(CameraDirection::RIGHT);
-								break;
 							case SDLK_ESCAPE:
-								//bExit = true;
 								UIWidget::currentWidget->setActive(true);
 								break;
 							case SDLK_p:
@@ -864,70 +826,11 @@ void Renderer::loop()
 								break;
 						}
 					break;
-					case SDL_KEYUP:
-						switch( event.key.keysym.sym )
-						{
-							case SDLK_SPACE :
-								break;
-							case SDLK_UP:
-								break;
-							case SDLK_DOWN:
-								break;
-							case SDLK_LEFT:
-								break;
-							case SDLK_RIGHT:
-								break;
-							case SDLK_ESCAPE:
-								//bExit = true;
-					
-								
-								break;
-							case SDLK_7 :
-								effect.duration = 30;
-								effect.effectType = 3;
-								addEffect(effect);			
-								break;
-							case SDLK_9 :
-								effect.duration = 30;
-								effect.effectType = 2;
-								addEffect(effect);			
-								break;
-							case SDLK_0 :
-								effect.duration = 30;
-								effect.effectType = 1;
-								addEffect(effect);
-								break;
-							default:
-								break;
-						}
-					break;
-					case SDL_MOUSEMOTION:
-						camera->Move2D(event.motion.x,event.motion.y);
-						break;
-					case SDL_JOYAXISMOTION:
-						if (event.jaxis.axis == 0) {
-							xjaxis = event.jaxis.value / 10;
-						}
-
-						if (event.jaxis.axis == 1) {
-							yjaxis = event.jaxis.value / 10;
-						}
-
-						if (event.jaxis.axis == 2) {
-							zjaxis = event.jaxis.value / 10;
-						}
-
-						if (event.jaxis.axis == 3) {
-							wjaxis = event.jaxis.value / 10;
-						}
-						break;
 				}                
 			}
 		}
 		
 		this->draw();
-
-		//SDL_Delay(10);
 	}
 
     

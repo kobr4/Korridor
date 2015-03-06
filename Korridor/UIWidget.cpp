@@ -120,43 +120,29 @@ void UIWidget::handleEvent(SDL_Event event) {
 			this->childs[selected]->onClick();
 			break;
 		case SDL_JOYAXISMOTION:
-			if (event.jaxis.axis == 0) {
-				
-			}
-
 			if (event.jaxis.axis == 1) {
 				if (abs(event.jaxis.value) < 400) {
 					yBackDeadzone = true;
 				}
 
-				if (yBackDeadzone && event.jaxis.value < -400) {
+				if (yBackDeadzone && (event.jaxis.value/10 < -400)) {
 					// DOWN
 					this->childs[selected]->setSelected(false);
 					selected = (++selected)%this->childs.size();
 					this->childs[selected]->setSelected(true);
 					yBackDeadzone = false;
+					puts("DOWN");
 				}
 
-				if (yBackDeadzone && event.jaxis.value > 400) {
+				if (yBackDeadzone && (event.jaxis.value/10 > 400)) {
 					// UP !
 					this->childs[selected]->setSelected(false);
 					(--selected < 0) ? selected = selected + this->childs.size() : selected;
 					this->childs[selected]->setSelected(true);
 					yBackDeadzone = false;				
+					puts("UP");
 				}
-
-
-				//yjaxis = event.jaxis.value / 10;
 			}
-			/*
-			if (event.jaxis.axis == 2) {
-				zjaxis = event.jaxis.value / 10;
-			}
-
-			if (event.jaxis.axis == 3) {
-				wjaxis = event.jaxis.value / 10;
-			}
-			*/
 			break;
 	}
 }

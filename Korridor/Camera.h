@@ -20,6 +20,7 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <SDL.h>
 
 enum CameraType {
 	ORTHO, FREE
@@ -79,6 +80,9 @@ class Camera {
 		glm::vec3 getMotionHeading();
 		void resetMotionHeading();
 
+		//Event handler
+		void handleEvent(SDL_Event event);
+
 		//Getting Functions
 		CameraType GetMode();
 		void GetViewport(int &loc_x, int &loc_y, int &width, int &height);
@@ -120,5 +124,13 @@ class Camera {
 		glm::mat4 model;
 		glm::mat4 MVP;
 
+		void UpdateInput();
+private :
+
+	static const int deadzone;
+	int xjaxis;
+	int yjaxis;
+	int zjaxis;
+	int wjaxis;
 };
 #endif
