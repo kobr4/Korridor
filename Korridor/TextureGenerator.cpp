@@ -140,31 +140,23 @@ Texture * TextureGenerator::generateLightmapTextureWithOcclusion(unsigned int wi
 					glm::vec3 intersec;
 					glm::vec3 position;
 					glm::vec3 bary;
-					//if (glm::distance(ap1, light_position) < 40.0f) {
-					
-						if (glm::intersectRayTriangle(light_position,-lightdir, ap1,ap2,ap3,intersec)) {
-							//bary = (ap1 + ap2 + ap3)/3.f;
-							//position = intersec * bary;
-							position = ap1 * (1 - intersec.x - intersec.y) + ap2 * intersec.x + ap3 * intersec.y;
-							if (distanceToLight > glm::distance(position, light_position)) {
-								isOccluded = true;
-							}
-							break;
+				
+					if (glm::intersectRayTriangle(light_position,-lightdir, ap1,ap2,ap3,intersec)) {
+						position = ap1 * (1 - intersec.x - intersec.y) + ap2 * intersec.x + ap3 * intersec.y;
+						if (distanceToLight > glm::distance(position, light_position)) {
+							isOccluded = true;
 						}
+						break;
+					}
 						
 						
-						if (glm::intersectRayTriangle(light_position,-lightdir, ap3,ap4,ap1,intersec)) {
-							//bary = (ap3 + ap4 + ap1)/3.f; 
-							//position = intersec * bary;
-							position = ap3 * (1 - intersec.x - intersec.y) + ap4 * intersec.x + ap1 * intersec.y;
-							if (distanceToLight > glm::distance(position, light_position)) {
-								isOccluded = true;
-							}
-							break;
+					if (glm::intersectRayTriangle(light_position,-lightdir, ap3,ap4,ap1,intersec)) {
+						position = ap3 * (1 - intersec.x - intersec.y) + ap4 * intersec.x + ap1 * intersec.y;
+						if (distanceToLight > glm::distance(position, light_position)) {
+							isOccluded = true;
 						}
-						
-					//}
-					
+						break;
+					}
 				}
 			}
 			

@@ -155,6 +155,10 @@ void func_exit_cb(void * data) {
 
 }
 
+void func_resume_cb(void * data) {
+	UIWidget::currentWidget->setActive(false);
+}
+
 void func_back_cb(void * data) {
 	UIWidget * widget = (UIWidget *)data;
 	if (widget->getParent() != NULL && widget->getParent()->getParent() != NULL) {
@@ -167,10 +171,9 @@ void Renderer::initializeContent() {
 	/* initialize random seed: */
 	srand (time(NULL));
 
-	ClosedSpaceGenerator::generateSpace(100.f,10.f,&spaceObjectArray,&spaceCount,1024,256);
+	ClosedSpaceGenerator::generateSpace(100.f,10.f,&spaceObjectArray,&spaceCount,4096,256);
 	OutputConsole::log("Generated space : space count = %d\n",spaceCount);
 
-	
 	for (unsigned int i = 0;i < spaceCount;i++) {
 		Renderable * renderable = Renderable::createRenderable(g_shader_debug, spaceObjectArray[i].texture, spaceObjectArray[i].triangleArray, spaceObjectArray[i].triangleCount);
 		renderable->setSecondaryTexture(spaceObjectArray[i].lightMapTexture);
@@ -395,7 +398,15 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		ovrTrackingCap_MagYawCorrection |
 		ovrTrackingCap_Position, 0);
 
+
+
 	UIHeader * headWidget = new UIHeader();
+
+	UIHeader * header3 = new UIHeader();
+	header3->setLabel("Resume");
+	header3->setOnClickCallback(&func_resume_cb,this);
+	headWidget->addChild(header3);
+
 	UIHeader * header1 = new UIHeader();
 	header1->setLabel("Option");
 	{

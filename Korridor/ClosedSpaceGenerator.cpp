@@ -338,7 +338,7 @@ void generateLightSource(T_QUAD * quadArray,unsigned int quadArrayCount,int begi
 	}
 }
 
-void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int begin, int end,unsigned int nbTexturePerLine, T_SPACE_OBJECT * spaceArray) {
+void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int begin, int end,unsigned int nbTexturePerLine, T_SPACE_OBJECT * spaceArray,unsigned int maxTextureWidth, unsigned int textureWidth) {
 	int quadCounter = 0;
 	unsigned int quadBegin = 0;
 	unsigned int quadEnd = 0;
@@ -346,42 +346,6 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 	T_TextureLightSource lightSource;
 	
 	T_TextureQuad currentQuad;
-
-	/*
-	unsigned int nbLightSource = 4;
-	lightSource[0].color[0] = 1.0f;
-	lightSource[0].color[1] = 1.0f;
-	lightSource[0].color[2] = 1.0f;
-
-	lightSource[0].position[0] = 22.0f;
-	lightSource[0].position[1] = 4.0f;
-	lightSource[0].position[2] = 61.0f;
-
-	lightSource[1].color[0] = 1.0f;
-	lightSource[1].color[1] = 1.0f;
-	lightSource[1].color[2] = 1.0f;
-
-	lightSource[1].position[0] = 40.0f;
-	lightSource[1].position[1] = 4.0f;
-	lightSource[1].position[2] = 80.0f;
-
-	lightSource[2].color[0] = 1.0f;
-	lightSource[2].color[1] = 1.0f;
-	lightSource[2].color[2] = 1.0f;
-
-	lightSource[2].position[0] = 60.0f;
-	lightSource[2].position[1] = 4.0f;
-	lightSource[2].position[2] = 50.0f;
-
-	lightSource[3].color[0] = 1.0f;
-	lightSource[3].color[1] = 1.0f;
-	lightSource[3].color[2] = 1.0f;
-
-	lightSource[3].position[0] = 80.0f;
-	lightSource[3].position[1] = 4.0f;
-	lightSource[3].position[2] = 46.0f;
-	*/
-
 
 	for (unsigned int i = 0;i < quadArrayCount;i++){ 
 		if (quadArray[i].state == ENABLED) {
@@ -412,8 +376,8 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 
 	spaceArray->triangleArray = (float*)malloc(sizeof(float) * 3 * 5 * spaceArray->triangleCount);
 	
-	Texture * main_texture = new Texture(1024,1024);
-	Texture * lightmap_texture = new Texture(256,256);
+	Texture * main_texture = new Texture(maxTextureWidth,maxTextureWidth);
+	Texture * lightmap_texture = new Texture(maxTextureWidth/4,maxTextureWidth/4);
 	int tmpTCount = 0;
 	quadCounter = 0;
 	for (unsigned int i = quadBegin;i < quadEnd;i++) {
@@ -424,14 +388,14 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 			float yTop = yBottom + 1.f / (float)nbTexturePerLine;
 			Texture * element_texture = NULL;
 			if (quadArray[i].position == VERTICAL) {
-				element_texture = TextureGenerator::generateTileTexture(256,256,10,8,16,1,130,30,30,100,100,100);
+				element_texture = TextureGenerator::generateTileTexture(textureWidth,textureWidth,10,8,16,1,130,30,30,100,100,100);
 
 			} else {
-				element_texture = TextureGenerator::generateTileTexture(256,256,0,16,256,1,100,50,0,10,10,10);
+				element_texture = TextureGenerator::generateTileTexture(textureWidth,textureWidth,0,16,256,1,100,50,0,10,10,10);
 			}
 			//printf("Packing texture at %d : %d %d\n",1024 / nbTexturePerLine * (quadCounter % nbTexturePerLine), 1024 / nbTexturePerLine * (quadCounter / nbTexturePerLine),nbTexturePerLine);
 			//printf("xBottom=%f yBottom=%f xTop=%f yTop=%f\n",xBottom,yBottom,xTop,yTop);
-			main_texture->packTexture(element_texture,1024 / nbTexturePerLine * (quadCounter % nbTexturePerLine),1024 / nbTexturePerLine * (quadCounter / nbTexturePerLine));
+			main_texture->packTexture(element_texture,maxTextureWidth / nbTexturePerLine * (quadCounter % nbTexturePerLine),maxTextureWidth / nbTexturePerLine * (quadCounter / nbTexturePerLine));
 			delete element_texture;
 
 			for (int z = 0;z < 3;z++) {
@@ -501,7 +465,7 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 				
 			}
 			element_lightmap->blur();
-			lightmap_texture->packTexture(element_lightmap,256 / nbTexturePerLine * (quadCounter % nbTexturePerLine),256 / nbTexturePerLine * (quadCounter / nbTexturePerLine));
+			lightmap_texture->packTexture(element_lightmap,(maxTextureWidth/4) / nbTexturePerLine * (quadCounter % nbTexturePerLine),(maxTextureWidth/4) / nbTexturePerLine * (quadCounter / nbTexturePerLine));
 			delete element_lightmap;
 			
 			// Light computation ends here.
@@ -649,7 +613,6 @@ void digRoom(unsigned int position,unsigned int linesize) {
 	if (newpos = hasRoomToDig(position,linesize)) {
 		g_node_stack[g_node_position] = newpos;
 		g_node_position++;
-		//printf("DIG! %d %d\n",g_node_position,newpos);
 		digRoom(newpos,linesize);
 
 	} else if (g_node_position > 0){
@@ -704,7 +667,7 @@ void ClosedSpaceGenerator::generateSpace(float dimension, float unit_distance, T
 
 	for (int i = 0; i < objectCount;i++) {
 		//printf("Creating quad array indices %d to %d\n",i*step,(i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step);
-		quadArrayToVertexbuffer(quadArray, quadArrayCount, i * step, (i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step ,maxTextureWidth/textureWidth,&(*spaceArray)[i]);
+		quadArrayToVertexbuffer(quadArray, quadArrayCount, i * step, (i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step ,maxTextureWidth/textureWidth,&(*spaceArray)[i],maxTextureWidth, textureWidth);
 	}
 	free(quadArray);
 }
