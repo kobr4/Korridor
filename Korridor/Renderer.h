@@ -70,9 +70,13 @@ public :
 	unsigned int getScreenHeight() {return screenHeight;};
 
 	void setExitState();
+
+	static float hudScale;
+	static float ipd;
 private :
 	SDL_Thread * asyncInitThread;
-	static const float hudScale;
+
+
 	unsigned int screenHeight;
 	unsigned int screenWidth;
 	unsigned int frameCounter;

@@ -306,7 +306,10 @@ void generateLightSource(T_QUAD * quadArray,unsigned int quadArrayCount,int begi
 
 	// Lightsource generation
 	unsigned int nbLightSource = counter / 15;
-	//nbLightSource = 1;
+
+#ifdef NOLIGHT
+	nbLightSource = 0;
+#endif
 	spaceArray->lightCount = nbLightSource;
 	if (nbLightSource > 0) {
 		spaceArray->lightPosition = (float*)malloc(sizeof(float)*3*nbLightSource);

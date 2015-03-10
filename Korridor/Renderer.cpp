@@ -46,7 +46,7 @@
 #include <time.h>       /* time */
 #include "UIWidget.h"
 
-#define OVR
+//#define OVR
 #define OVR_OS_WIN32
 /*
 #ifdef WIN32
@@ -63,7 +63,8 @@
 #include <OVR_CAPI.h>
 #include <OVR_CAPI_GL.h>
 
-const float Renderer::hudScale = 0.68f;
+float Renderer::hudScale = 0.68f;
+float Renderer::ipd = 0.5f;
 
 unsigned char g_texdata[]= { 255, 255, 255, 255, 255, 255, 255, 255,
 							255, 255, 255, 255, 255, 255, 255, 255};
@@ -157,6 +158,7 @@ void func_exit_cb(void * data) {
 
 void func_resume_cb(void * data) {
 	UIWidget::currentWidget->setActive(false);
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
 void func_back_cb(void * data) {
@@ -165,6 +167,14 @@ void func_back_cb(void * data) {
 		UIWidget::currentWidget = widget->getParent()->getParent();
 	}
 
+}
+
+void func_value_hudscale_change_cb(float newValue, void * data) {
+	Renderer::hudScale = newValue;
+}
+
+void func_value_ipd_change_cb(float newValue, void * data) {
+	Renderer::ipd = newValue;
 }
 
 void Renderer::initializeContent() {
@@ -430,6 +440,24 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		headerBoolean3->setOnBoolChangeCallback(func_bool_postprocess_change_cb,NULL);
 		header1->addChild(headerBoolean3);
 
+		UINumeric * headerNumeric = new UINumeric();
+		headerNumeric->setLabel("HUD Scale");
+		headerNumeric->setValue(Renderer::hudScale);
+		headerNumeric->setStep(0.02f);
+		headerNumeric->setMaxValue(1.0f);
+		headerNumeric->setMinValue(0.5f);
+		headerNumeric->setOnValueChangeCallback(func_value_hudscale_change_cb,NULL);
+		header1->addChild(headerNumeric);
+
+		UINumeric * headerNumeric2 = new UINumeric();
+		headerNumeric2->setLabel("Interpupillary distance");
+		headerNumeric2->setValue(Renderer::ipd);
+		headerNumeric2->setStep(0.05f);
+		headerNumeric2->setMaxValue(1.0f);
+		headerNumeric2->setMinValue(0.2f);
+		headerNumeric2->setOnValueChangeCallback(func_value_ipd_change_cb,NULL);
+		header1->addChild(headerNumeric2);
+
 		UIHeader * headerOptionBack = new UIHeader();
 		headerOptionBack->setLabel("Back");
 		headerOptionBack->setOnClickCallback(&func_back_cb,headerOptionBack);
@@ -664,9 +692,9 @@ void Renderer::draw()
 	camera->GetMatricies(P,V,M);
 
 	if (eyeid == 0) {
-		V = camera->TranslateToEye(-0.5f);
+		V = camera->TranslateToEye(-ipd);
 	} else {
-		V = camera->TranslateToEye(0.5f);
+		V = camera->TranslateToEye(ipd);
 	}
 
 	memcpy(g_shader_debug->getProjectionMatrix(),glm::value_ptr(P),sizeof(float)*16);
@@ -823,6 +851,7 @@ void Renderer::loop()
 						switch( event.key.keysym.sym )
 						{
 							case SDLK_ESCAPE:
+								SDL_SetRelativeMouseMode(SDL_FALSE);
 								UIWidget::currentWidget->setActive(true);
 								break;
 							case SDLK_p:

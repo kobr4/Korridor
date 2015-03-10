@@ -8,6 +8,7 @@ class Renderer;
 
 typedef void (uiwidget_func_cb)(void * data);
 typedef void (uiwidget_func_bool_change_cb)(bool newState, void * data);
+typedef void (uiwidget_func_value_change_cb)(float newValue, void * data);
 class UIWidget {
 
 protected :
@@ -72,4 +73,33 @@ public :
 	void setOnBoolChangeCallback(uiwidget_func_bool_change_cb * func, void * data);
 	virtual void draw(Renderer * renderer,Uint32 x,Uint32 y);
 	virtual void onClick();
+};
+
+class UINumeric : public UIHeader {
+protected :
+	float value;
+	float step;
+	float min;
+	float max;
+	uiwidget_func_cb * valueIncreaseFuncCb;
+	void * valueIncreaseFuncData;
+	uiwidget_func_cb * valueDecreaseFuncCb;
+	void * valueDecreaseFuncData;
+	uiwidget_func_value_change_cb * valueChangeFuncCb;
+	void * valueChangeFuncData;
+public :
+	UINumeric();
+	void setValue(float value);
+	float getValue();
+	void setStep(float step);
+	float getStep();
+	void setMaxValue(float max);
+	float getMaxValue();
+	void setMinValue(float min);
+	float getMinValue();
+	void setOnValueIncreaseCallback(uiwidget_func_cb * func, void * data);
+	void setOnValueDecreaseCallback(uiwidget_func_cb * func, void * data);
+	void setOnValueChangeCallback(uiwidget_func_value_change_cb * func, void * data);
+	virtual void draw(Renderer * renderer,Uint32 x,Uint32 y);
+	virtual void handleEvent(SDL_Event event);
 };

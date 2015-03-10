@@ -81,6 +81,7 @@ void UIWidget::handleEvent(SDL_Event event) {
 					this->childs[selected]->handleEvent(event);
 					break;
 				case SDLK_ESCAPE :
+					SDL_SetRelativeMouseMode(SDL_TRUE);
 					this->setActive(false);
 					break;
 				default:
@@ -224,4 +225,115 @@ void UIBoolean::onClick() {
 void UIBoolean::setOnBoolChangeCallback(uiwidget_func_bool_change_cb * func, void * data){
 	this->boolChangeFuncCb = func;
 	this->boolChangeFuncData = data;
+}
+
+void func_default_value_increase_cb(void * data) {
+	UINumeric * numeric = (UINumeric *)data;
+	if ((numeric->getStep() + numeric->getValue()) <= numeric->getMaxValue()) {
+		numeric->setValue(numeric->getStep() + numeric->getValue());
+	} else {
+		numeric->setValue(numeric->getMaxValue());
+	}
+}
+
+void func_default_value_decrease_cb(void * data) {
+	UINumeric * numeric = (UINumeric *)data;
+	if (numeric->getValue() - numeric->getStep() >= numeric->getMinValue()) {
+		numeric->setValue(numeric->getValue() - numeric->getStep());
+	} else {
+		numeric->setValue(numeric->getMinValue());
+	}
+}
+
+UINumeric::UINumeric() : UIHeader () {
+	this->setOnValueIncreaseCallback(func_default_value_increase_cb,this);
+	this->setOnValueDecreaseCallback(func_default_value_decrease_cb,this);
+	this->valueChangeFuncCb = NULL;
+	this->valueChangeFuncData = NULL;
+};
+
+void UINumeric::setValue(float value) {
+	this->value = value;
+}
+
+float UINumeric::getValue() {
+	return this->value;
+}
+
+void UINumeric::setStep(float step) {
+	this->step = step;
+}
+
+float UINumeric::getStep() {
+	return this->step;
+}
+
+void UINumeric::setMaxValue(float max) {
+	this->max = max;
+}
+
+void UINumeric::setMinValue(float min) {
+	this->min = min;
+}
+
+float UINumeric::getMaxValue() {
+	return this->max;
+}
+
+float UINumeric::getMinValue() {
+	return this->min;
+}
+
+void UINumeric::setOnValueIncreaseCallback(uiwidget_func_cb * func, void * data) {
+	this->valueIncreaseFuncCb = func;
+	this->valueIncreaseFuncData = data;
+}
+
+void UINumeric::setOnValueDecreaseCallback(uiwidget_func_cb * func, void * data) {
+	this->valueDecreaseFuncCb = func;
+	this->valueDecreaseFuncData = data;
+}
+
+void UINumeric::setOnValueChangeCallback(uiwidget_func_value_change_cb * func, void * data) {
+	this->valueChangeFuncCb = func;
+	this->valueChangeFuncData = data;
+}
+
+void UINumeric::draw(Renderer * renderer,Uint32 x,Uint32 y) {
+	std::string s;
+	if (selected) {
+		s = ">"+this->text;
+	} else {
+		s = this->text;
+	}
+
+	char sValue[20];
+	sprintf(sValue," < %.2f >",value);
+	s.append(sValue);
+
+	renderer->drawMessage(s.c_str(),x,y);
+	this->x = x;
+	this->y = y;
+	this->length = s.length() * UIWidget::elementWidth;
+}
+
+void UINumeric::handleEvent(SDL_Event event) {
+	switch (event.type)  {
+		case SDL_KEYDOWN:
+			switch( event.key.keysym.sym ) {
+				case SDLK_LEFT:
+					this->valueDecreaseFuncCb(this->valueDecreaseFuncData);
+					if (this->valueChangeFuncCb != NULL) {
+						this->valueChangeFuncCb(this->getValue(),this->valueChangeFuncData);
+					}
+					break;
+				case SDLK_RIGHT:
+					this->valueIncreaseFuncCb(this->valueIncreaseFuncData);
+					if (this->valueChangeFuncCb != NULL) {
+						this->valueChangeFuncCb(this->getValue(),this->valueChangeFuncData);
+					}
+					break;
+			}
+		break;
+	}
 }
