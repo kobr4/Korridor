@@ -831,13 +831,15 @@ void Renderer::loop()
 	while (!bExit)
 	{
 		frameCounter++;
-		int tnew = SDL_GetTicks();
-		int dt = tnew - told;
-		told = tnew;
+		if (frameCounter%10 == 0) {
+			int tnew = SDL_GetTicks();
+			int dt = tnew - told;
+			told = tnew;
 
-		if (dt != 0)
-			this->fps = 1000/dt;
-
+			if (dt != 0) {
+				this->fps = 10000/dt;
+			}
+		}
 
 		while( SDL_PollEvent( &event ) )
 		{
@@ -847,6 +849,12 @@ void Renderer::loop()
 				camera->handleEvent(event);
 				switch( event.type )
 				{
+					case SDL_JOYBUTTONDOWN:
+						if (event.jbutton.button == 4) {
+							SDL_SetRelativeMouseMode(SDL_FALSE);
+							UIWidget::currentWidget->setActive(true);
+						}
+						break;
 					case SDL_KEYDOWN:
 						switch( event.key.keysym.sym )
 						{
@@ -874,7 +882,7 @@ void Renderer::loop()
 	}
 
     
-
+	SDL_FreeSurface(this->textSurface);
 	SDL_GL_DeleteContext(contexteOpenGL);
     SDL_DestroyWindow(displayWindow);
     
@@ -917,4 +925,9 @@ void Renderer::addEffect(T_EFFECT effect) {
 			return;
 		}
 	}
+}
+
+Renderer::~Renderer() {
+
+	//delete this->camera;
 }

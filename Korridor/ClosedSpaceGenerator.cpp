@@ -7,7 +7,7 @@
 #include "TextureGenerator.h"
 #include <vector>
 
-
+//#define NOLIGHT
 
 const float g_ground_level = -2.f;
 unsigned int g_iteration_counter = 0;
@@ -177,7 +177,6 @@ void generateVertical(T_QUAD * quadArray, unsigned int * quadArrayCount, unsigne
 		bool bDisable = false;
 		for (int i = 0;i < *quadArrayCount;i++) {
 			if (quadArray[i].state == ENABLED && quadIsDuplicated(&quadArray[i],&quadArray[*quadArrayCount])) {
-				//puts("Duplication detected.");
 				quadArray[i].state = DISABLED;
 				bDisable = true;
 				break;
@@ -216,7 +215,6 @@ void generateMaze(T_QUAD * quadArray, unsigned int * quadArrayCount, unsigned in
 				generateTop(quadArray,quadArrayCount,con_face_indice, dimension, unit_distance, pos_x, pos_y);
 				generateVertical(quadArray,quadArrayCount,con_face_indice, dimension, unit_distance, pos_x, pos_y);	
 			}
-			//printf("=> %d\n",*quadArrayCount);
 		}
 	}
 }
@@ -228,10 +226,6 @@ void generateRoom(T_QUAD * quadArray, unsigned int * quadArrayCount, unsigned in
 	if (con_face_indice == -1) {
 		float pos_x = rand()%ui_nb_step;
 		float pos_y = rand()%ui_nb_step;
-
-		//pos_x = 0.;f
-		//pos_y = 0.f;
-		//printf("Creating pos_x = %f, pos_y = %f \n",pos_x,pos_y);
 
 		generateBottom(quadArray,quadArrayCount,con_face_indice, dimension, unit_distance, pos_x, pos_y);
 		generateTop(quadArray,quadArrayCount,con_face_indice, dimension, unit_distance, pos_x, pos_y);
@@ -251,8 +245,6 @@ void generateRoom(T_QUAD * quadArray, unsigned int * quadArrayCount, unsigned in
 		}
 
 		if (bCreate) {
-			//quadArray[con_face_indice].state = DISABLED;
-			//printf("Creating pos_x = %f, pos_y = %f indice=%d quadcount=%d\n",new_pos_x,new_pos_y,con_face_indice,*quadArrayCount);
 			g_iteration_counter++;
 			generateBottom(quadArray,quadArrayCount,con_face_indice, dimension, unit_distance, new_pos_x, new_pos_y);
 			generateTop(quadArray,quadArrayCount,con_face_indice, dimension, unit_distance, new_pos_x, new_pos_y);
@@ -396,8 +388,6 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 			} else {
 				element_texture = TextureGenerator::generateTileTexture(textureWidth,textureWidth,0,16,256,1,100,50,0,10,10,10);
 			}
-			//printf("Packing texture at %d : %d %d\n",1024 / nbTexturePerLine * (quadCounter % nbTexturePerLine), 1024 / nbTexturePerLine * (quadCounter / nbTexturePerLine),nbTexturePerLine);
-			//printf("xBottom=%f yBottom=%f xTop=%f yTop=%f\n",xBottom,yBottom,xTop,yTop);
 			main_texture->packTexture(element_texture,maxTextureWidth / nbTexturePerLine * (quadCounter % nbTexturePerLine),maxTextureWidth / nbTexturePerLine * (quadCounter / nbTexturePerLine));
 			delete element_texture;
 
@@ -407,33 +397,12 @@ void quadArrayToVertexbuffer(T_QUAD * quadArray,unsigned int quadArrayCount, int
 				currentQuad.p3[z] = quadArray[i].p3[z];
 				currentQuad.p4[z] = quadArray[i].p4[z];
 			}
-			//Texture * element_lightmap = TextureGenerator::generateLightmapTexture(256,256,&lightSource,&currentQuad);
-			
 			
 			// Light computation starts here.
 			Texture * element_lightmap = TextureGenerator::generateFloorLightmap(64,64,0);
 			for (int l = 0;l < gLightSourceVector.size();l++) {
-			//for (int l = 0;l < 1;l++) {
-				/*
-				lightSource.color[0] = 1.0f;
-				lightSource.color[1] = 1.0f;
-				lightSource.color[2] = 1.0f;
-
-				lightSource.position[0] = spaceArray->lightPosition[l * 3];
-				lightSource.position[1] = spaceArray->lightPosition[l * 3 + 1];
-				lightSource.position[2] = spaceArray->lightPosition[l * 3 + 2];
-				*/
 				lightSource = gLightSourceVector[l];
 
-				/*
-				lightSource.color[0] = 1.0f;
-				lightSource.color[1] = 1.0f;
-				lightSource.color[2] = 1.0f;
-				lightSource.position[0] = 22.0f;
-				lightSource.position[1] = 4.0f;
-				lightSource.position[2] = 61.0f;
-				*/
-				//printf("Light[%d] %f %f %f\n",l,lightSource.position[0],lightSource.position[1],lightSource.position[2]);
 				glm::vec3 light_position = glm::vec3(lightSource.position[0],lightSource.position[1],lightSource.position[2]);
 				for (unsigned int i = 0;i < quadArrayCount;i++){ 
 					if (quadArray[i].state == ENABLED) {
@@ -643,14 +612,10 @@ void ClosedSpaceGenerator::generateSpace(float dimension, float unit_distance, T
 	for (int i = 0;i < istep_count * istep_count;i++) {
 		g_maze_grid[i] = false;
 	}
-	//printf("nb_step=%d\n",istep_count);
-	
+
 	digRoom(50,istep_count);
 	
 	generateMaze(quadArray,&quadArrayCount,-1,dimension, unit_distance);
-
-	//generateRoom(quadArray,&quadArrayCount,-1,dimension, unit_distance);
-	
 
 	for (int i = 0;i < quadArrayCount;i++) {
 		if (quadArray[i].state == ENABLED) {

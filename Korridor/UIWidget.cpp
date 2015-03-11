@@ -48,6 +48,7 @@ void UIWidget::handleEvent(SDL_Event event) {
 	unsigned int mousex;
 	unsigned int mousey;
 	static bool yBackDeadzone = true;
+	static int lastInputTick = 0;
 	int selected = 0;
 
 	if (this->childs.size() == 0) {
@@ -116,33 +117,39 @@ void UIWidget::handleEvent(SDL_Event event) {
 			}
 			break;
 		case SDL_JOYBUTTONDOWN:
+			if (event.jbutton.button == 4) {
+				SDL_SetRelativeMouseMode(SDL_TRUE);
+				this->setActive(false);
+				break;
+			}
 		case SDL_FINGERDOWN:
 		case SDL_MOUSEBUTTONDOWN:
 			this->childs[selected]->onClick();
 			break;
 		case SDL_JOYAXISMOTION:
 			if (event.jaxis.axis == 1) {
-				if (abs(event.jaxis.value) < 400) {
+				if ((abs(event.jaxis.value) < 400*2)||(SDL_GetTicks() - lastInputTick > 500)) {
 					yBackDeadzone = true;
 				}
 
-				if (yBackDeadzone && (event.jaxis.value/10 < -400)) {
-					// DOWN
+				if (yBackDeadzone && (event.jaxis.value/10 < -400*2)) {
+					this->childs[selected]->setSelected(false);
+					(--selected < 0) ? selected = selected + this->childs.size() : selected;
+					this->childs[selected]->setSelected(true);
+					yBackDeadzone = false;	
+					lastInputTick = SDL_GetTicks();
+				}
+
+				if (yBackDeadzone && (event.jaxis.value/10 > 400*2)) {
 					this->childs[selected]->setSelected(false);
 					selected = (++selected)%this->childs.size();
 					this->childs[selected]->setSelected(true);
 					yBackDeadzone = false;
-					puts("DOWN");
+					lastInputTick = SDL_GetTicks();
 				}
-
-				if (yBackDeadzone && (event.jaxis.value/10 > 400)) {
-					// UP !
-					this->childs[selected]->setSelected(false);
-					(--selected < 0) ? selected = selected + this->childs.size() : selected;
-					this->childs[selected]->setSelected(true);
-					yBackDeadzone = false;				
-					puts("UP");
-				}
+			}
+			if (event.jaxis.axis == 0) {
+				this->childs[selected]->handleEvent(event);
 			}
 			break;
 	}
@@ -318,6 +325,8 @@ void UINumeric::draw(Renderer * renderer,Uint32 x,Uint32 y) {
 }
 
 void UINumeric::handleEvent(SDL_Event event) {
+	static bool xBackDeadzone = true;
+	static int lastInputTick = 0;
 	switch (event.type)  {
 		case SDL_KEYDOWN:
 			switch( event.key.keysym.sym ) {
@@ -335,5 +344,31 @@ void UINumeric::handleEvent(SDL_Event event) {
 					break;
 			}
 		break;
+		case SDL_JOYAXISMOTION:
+			if (event.jaxis.axis == 0) {
+				if ((abs(event.jaxis.value) < 400*2) ||(SDL_GetTicks() - lastInputTick > 500)) {
+					xBackDeadzone = true;
+				} 
+
+				if (xBackDeadzone && (event.jaxis.value/10 < -400*2)) {
+					this->valueDecreaseFuncCb(this->valueDecreaseFuncData);
+					if (this->valueChangeFuncCb != NULL) {
+						this->valueChangeFuncCb(this->getValue(),this->valueChangeFuncData);
+					}					
+					xBackDeadzone = false;
+					lastInputTick = SDL_GetTicks();
+				}
+
+				if (xBackDeadzone && (event.jaxis.value/10 > 400*2)) {
+					this->valueIncreaseFuncCb(this->valueIncreaseFuncData);
+					if (this->valueChangeFuncCb != NULL) {
+						this->valueChangeFuncCb(this->getValue(),this->valueChangeFuncData);
+					}
+					xBackDeadzone = false;
+					lastInputTick = SDL_GetTicks();
+				}
+			}
+
+			break;
 	}
 }

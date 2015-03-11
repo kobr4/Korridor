@@ -73,6 +73,8 @@ public :
 
 	static float hudScale;
 	static float ipd;
+
+	~Renderer();
 private :
 	SDL_Thread * asyncInitThread;
 
