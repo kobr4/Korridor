@@ -11,7 +11,7 @@
 
 const float g_ground_level = -2.f;
 unsigned int g_iteration_counter = 0;
-unsigned int g_max_iteration = 20;
+unsigned int g_max_iteration = 100;
 
 unsigned int * g_node_stack;
 unsigned int g_node_position;
@@ -111,6 +111,7 @@ bool quadIsDuplicated(T_QUAD * quadArray1, T_QUAD * quadArray2) {
 		belongToQuad(quadArray1,quadArray2->p4)) {
 		return true;
 	}
+	return false;
 }
 
 
@@ -206,8 +207,8 @@ void generateMaze(T_QUAD * quadArray, unsigned int * quadArrayCount, unsigned in
 	unsigned int ui_nb_step = (unsigned int)nb_step;
 	for (int i = 0;i < nb_step;i++) {
 		for (int j = 0;j < nb_step;j++) {
-			float pos_x = i*nb_step;
-			float pos_y = j*nb_step;
+			float pos_x = i*unit_distance;
+			float pos_y = j*unit_distance;
 
 			unsigned int pos = i+j*nb_step;
 			if (g_maze_grid[pos]) {
@@ -613,7 +614,7 @@ void ClosedSpaceGenerator::generateSpace(float dimension, float unit_distance, T
 		g_maze_grid[i] = false;
 	}
 
-	digRoom(50,istep_count);
+	digRoom(rand()%(istep_count * istep_count),istep_count);
 	
 	generateMaze(quadArray,&quadArrayCount,-1,dimension, unit_distance);
 
@@ -628,12 +629,12 @@ void ClosedSpaceGenerator::generateSpace(float dimension, float unit_distance, T
 	*spaceArray = (T_SPACE_OBJECT*)malloc(sizeof(T_SPACE_OBJECT)*objectCount);
 	*spaceCount = objectCount;
 	
-	for (int i = 0; i < objectCount;i++) {
+	for (unsigned int i = 0; i < objectCount;i++) {
 		generateLightSource(quadArray,quadArrayCount,i * step, (i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step , &(*spaceArray)[i]); 
 	}
 	
 
-	for (int i = 0; i < objectCount;i++) {
+	for (unsigned int i = 0; i < objectCount;i++) {
 		//printf("Creating quad array indices %d to %d\n",i*step,(i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step);
 		quadArrayToVertexbuffer(quadArray, quadArrayCount, i * step, (i+1) * step > enabledQuadCounter ? enabledQuadCounter : (i+1) * step ,maxTextureWidth/textureWidth,&(*spaceArray)[i],maxTextureWidth, textureWidth);
 	}

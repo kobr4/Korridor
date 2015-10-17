@@ -99,4 +99,9 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="font.data">
+      <Filter>Fichiers sources\Fichiers de ressources</Filter>
+    </None>
+  </ItemGroup>
 </Project>

@@ -13,11 +13,17 @@ Camera::Camera() {
 	max_pitch_rate = 5;
 	max_heading_rate = 5;
 	move_camera = false;
-
+	camera_look_at = glm::vec3();
+	camera_position = glm::vec3();
+	camera_pitch = 0.f;
 	xjaxis = 0;
 	yjaxis = 0;
 	zjaxis = 0;
 	wjaxis = 0;
+	near_clip = 1.0f;
+	far_clip = 100.0f;
+	aspect = 16.0/9.0;
+
 }
 Camera::~Camera() {
 }
@@ -48,6 +54,7 @@ void Camera::Update() {
 		//need to multiply by aspect!!! (otherise will not scale properly)
 		projection = glm::ortho(-1.5f * float(aspect), 1.5f * float(aspect), -1.5f, 1.5f, -10.0f, 10.f);
 	} else if (camera_mode == FREE) {
+		
 		projection = glm::perspective(field_of_view, aspect, near_clip, far_clip);
 		//detmine axis for pitch rotation
 		glm::vec3 axis = glm::cross(camera_direction, camera_up);
@@ -68,6 +75,7 @@ void Camera::Update() {
 		camera_heading *= .5;
 		camera_pitch *= .5;
 		camera_position_delta = camera_position_delta * .8f;
+		
 	}
 	//compute the MVP
 	view = glm::lookAt(camera_position, camera_look_at, camera_up);

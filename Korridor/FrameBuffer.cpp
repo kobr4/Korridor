@@ -1,5 +1,6 @@
 #include "FrameBuffer.h"
 #include <stdlib.h>
+#define GLEW_STATIC
 #include <GL/glew.h>
 #include "Texture.h"
 #include "Sprite.h"

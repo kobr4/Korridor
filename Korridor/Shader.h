@@ -49,6 +49,8 @@ public :
 	};
 	void load_fragment(const char * filename);
 	void load_vertex(const char * filename);
+	void load_fragment_from_string(const char * fragmentstr);
+	void load_vertex_from_string(const char * vertexstr);
 	static Shader * createBuiltin(unsigned int shaderType);
 	void bind();
 	void unbind();

@@ -204,6 +204,14 @@ Shader * Shader::createBuiltin(unsigned int shaderType) {
 	}
 }
 
+void Shader::load_fragment_from_string(const char * fragmentstr) {
+	load_from_string(fragmentstr,this->f_length,this->f_string,this->f_string_length);
+}
+
+void Shader::load_vertex_from_string(const char * vertexstr) {
+	load_from_string(vertexstr,this->v_length,this->v_string,this->v_string_length);
+}
+
 void Shader::load_fragment(const char * filename) {
 	load_string(filename,this->f_length,this->f_string,this->f_string_length);
 }

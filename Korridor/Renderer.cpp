@@ -24,11 +24,13 @@
 * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#define GLEW_STATIC
 #include "Renderer.h"
 #include <SDL.h>
 #undef main
 #include <SDL_ttf.h>
 #include <iostream>
+
 #include <GL/glew.h>
 #include "Shader.h"
 #include "FrameBuffer.h"
@@ -46,7 +48,7 @@
 #include <time.h>       /* time */
 #include "UIWidget.h"
 
-//#define OVR
+#define OVR
 #define OVR_OS_WIN32
 /*
 #ifdef WIN32
@@ -65,6 +67,23 @@
 
 float Renderer::hudScale = 0.68f;
 float Renderer::ipd = 0.5f;
+
+//ugliest hack ever !
+const char test[] = {
+#include "font.data"
+};
+
+const char * fragment_lightmap_texturing =
+#include "assets/fragment_lightmap_texturing.gl"
+;
+
+const char * vertex = 
+#include "assets/vertex.gl"
+;
+	
+const char * fragment_debug =
+#include "assets/fragment_debug.gl"
+;
 
 unsigned char g_texdata[]= { 255, 255, 255, 255, 255, 255, 255, 255,
 							255, 255, 255, 255, 255, 255, 255, 255};
@@ -181,7 +200,7 @@ void Renderer::initializeContent() {
 	/* initialize random seed: */
 	srand (time(NULL));
 
-	ClosedSpaceGenerator::generateSpace(100.f,10.f,&spaceObjectArray,&spaceCount,4096,256);
+	ClosedSpaceGenerator::generateSpace(180.f,10.f,&spaceObjectArray,&spaceCount,4096,256);
 	OutputConsole::log("Generated space : space count = %d\n",spaceCount);
 
 	for (unsigned int i = 0;i < spaceCount;i++) {
@@ -228,7 +247,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 
     atexit(SDL_Quit);
 
-     SDL_Init(SDL_INIT_VIDEO);
+     //SDL_Init(SDL_INIT_VIDEO);
 
     // Version d'OpenGL
       
@@ -243,7 +262,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 
 
 	displayWindow = SDL_CreateWindow("Test SDL 2.0", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->screenWidth, this->screenHeight, SDL_WINDOW_OPENGL  | (fullscreen ? SDL_WINDOW_FULLSCREEN : 0));
-    
+
     // Création du contexte OpenGL
   
     contexteOpenGL = SDL_GL_CreateContext(displayWindow);
@@ -263,7 +282,10 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		exit(1);
 	}
 
-	this->font = TTF_OpenFont( "digital display tfb.ttf",28);
+
+	SDL_RWops* fontdataptr = SDL_RWFromConstMem(test,sizeof(test));
+	this->font = TTF_OpenFontRW(fontdataptr, 1, 28);
+	//this->font = TTF_OpenFont( "digital display tfb.ttf",28);
 	if (this->font == NULL)
 	{
 		puts("ERROR : unable to load font");
@@ -286,9 +308,13 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	bExit = false;
 
 
+
+
 	shaderLightmapTexturing = new Shader();
-	shaderLightmapTexturing->load_fragment("fragment_lightmap_texturing.gl");
-	shaderLightmapTexturing->load_vertex("vertex.gl");
+	shaderLightmapTexturing->load_fragment_from_string(fragment_lightmap_texturing);
+	shaderLightmapTexturing->load_vertex_from_string(vertex);
+	//shaderLightmapTexturing->load_fragment("fragment_lightmap_texturing.gl");
+	//shaderLightmapTexturing->load_vertex("vertex.gl");
 
 	shaderTexturing = Shader::createBuiltin(SHADER_TEXTURING);
 
@@ -298,17 +324,17 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	this->fbHalfRes = NULL;
 
 	g_shader_debug = new Shader();
-	g_shader_debug->load_fragment("fragment_debug.gl");
-	g_shader_debug->load_vertex("vertex.gl");
-
+	g_shader_debug->load_fragment_from_string(fragment_debug);
+	g_shader_debug->load_vertex_from_string(vertex);
+	
+	//g_shader_debug->load_fragment("fragment_debug.gl");
+	//g_shader_debug->load_vertex("vertex.gl");
 
 	camera = new Camera();
 	camera->SetClipping(0.1f,200.f);
 	camera->SetPosition(glm::vec3(14.7f,1.9f,57.5f));
 	//camera->SetLookAt(glm::vec3(35.3f,7.0f,46.6f));
 
-
-	
 	for (int i = 0;i < 25;i++) {
 		camera->ChangePitch(1.f);
 		camera->Update();
@@ -428,16 +454,19 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		UIBoolean * headerBoolean = new UIBoolean();
 		headerBoolean->setLabel("Collision detection");
 		headerBoolean->setOnBoolChangeCallback(func_bool_collision_change_cb,NULL);
+		headerBoolean->setState(g_collision_detection);
 		header1->addChild(headerBoolean);
 
 		UIBoolean * headerBoolean2 = new UIBoolean();
 		headerBoolean2->setLabel("Faces culling");
 		headerBoolean2->setOnBoolChangeCallback(func_bool_cullface_change_cb,NULL);
+		headerBoolean2->setState(g_cullface);	
 		header1->addChild(headerBoolean2);
 
 		UIBoolean * headerBoolean3 = new UIBoolean();
 		headerBoolean3->setLabel("Post-processing");
 		headerBoolean3->setOnBoolChangeCallback(func_bool_postprocess_change_cb,NULL);
+		headerBoolean3->setState(g_postprocess);
 		header1->addChild(headerBoolean3);
 
 		UINumeric * headerNumeric = new UINumeric();
@@ -472,7 +501,6 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	headWidget->addChild(header2);
 
 	UIWidget::currentWidget = headWidget;
-
 	asyncInitThread = SDL_CreateThread(AsyncInitThread, "AsyncInitThread", (void *)this);
 }
 
@@ -534,6 +562,7 @@ void Renderer::drawMessage(SDL_Surface * textSur,float x,float y) {
 
 void Renderer::drawMessage(const char * message,RendererTextAlign hAlign,RendererTextAlign vAlign)
 {
+	
 	SDL_Color fontcolor = {255, 255, 255};
 
 
@@ -541,6 +570,7 @@ void Renderer::drawMessage(const char * message,RendererTextAlign hAlign,Rendere
 		return;
 
 	SDL_Surface * textSur = TTF_RenderText_Solid(this->font,message,fontcolor);	//set the text surface
+	
 	if (textSur == NULL)
 	{
 		
@@ -576,7 +606,9 @@ void Renderer::drawMessage(const char * message,RendererTextAlign hAlign,Rendere
 	}
 
 	drawMessage(textSur,rect.x,rect.y);
+	
 	SDL_FreeSurface(textSur);	
+	
 }
 
 void Renderer::draw()
@@ -773,20 +805,23 @@ void Renderer::draw()
 	if (g_postprocess && g_asyncload) {
 		this->fbHalfRes->draw(screenWidth,screenHeight);	
 	}
-
+					
 	char s[1024];
 	glm::vec3 cam_pos = camera->getPosition();
 	sprintf(s,"Pos: %.1f %.1f %.1f",cam_pos[0],cam_pos[1],cam_pos[2]);
 	this->drawMessage(s,RendererTextAlign::ALIGNRIGHT,RendererTextAlign::ALIGNBOTTOM);
-
+	
 
 	//this->drawMessage("BOTTOMLEFT",RendererTextAlign::ALIGNLEFT,RendererTextAlign::ALIGNBOTTOM);
 
+	
 	if (UIWidget::currentWidget->isActive()){
 		UIWidget::currentWidget->drawChilds(this);
 	}
-
+	
+	
 	this->drawFps();
+
 	OutputConsole::render();
 
 	glEnable(GL_BLEND);
@@ -795,7 +830,7 @@ void Renderer::draw()
 	glDisable(GL_BLEND);	
 	this->shaderTexturing->unbind();
 	
-	
+
 
 	#ifdef OVR
 	ovrEyeType eye = hmd->EyeRenderOrder[eyeid];
