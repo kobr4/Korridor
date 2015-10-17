@@ -261,7 +261,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
 
-	displayWindow = SDL_CreateWindow("Test SDL 2.0", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->screenWidth, this->screenHeight, SDL_WINDOW_OPENGL  | (fullscreen ? SDL_WINDOW_FULLSCREEN : 0));
+	displayWindow = SDL_CreateWindow("Korridor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->screenWidth, this->screenHeight, SDL_WINDOW_OPENGL  | (fullscreen ? SDL_WINDOW_FULLSCREEN : 0));
 
     // Création du contexte OpenGL
   

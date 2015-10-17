@@ -68,6 +68,7 @@
       <AdditionalLibraryDirectories>$(LIBOVR)\Lib\Win32\VS2012;$(SDLPATH)/lib/x86;$(SDLTTFPATH)/lib/x86;$(GLEWPATH)/lib/Release/Win32/</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:LIBCMT
  %(AdditionalOptions)</AdditionalOptions>
+      <SubSystem>Windows</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

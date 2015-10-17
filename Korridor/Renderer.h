@@ -25,7 +25,7 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include "SDL.h"
-#undef main
+//#undef main
 #include <SDL_ttf.h>
 class Game;
 class Sprite;

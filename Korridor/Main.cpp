@@ -4,12 +4,12 @@
 int main (int argc, char **argv) {
 	unsigned int w = 1920;
 	unsigned int h = 1080;
-	bool fullscreen = false;
+	bool fullscreen = true;
 	for (int i = 0;i < argc;i++) {
 		if (argv[i][0] == '-'){
 			switch(argv[i][1]) {
 			case 'f' :
-				fullscreen = true;
+				fullscreen = false;
 				break;
 			case 'h' :
 				h = atoi(&argv[i][2]);
