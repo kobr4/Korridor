@@ -6,11 +6,11 @@ Oculus Rift VR Maze Demo
 
 It's basically a FPS-like maze exploration demo.
 
-Windows Build : https://github.com/kobr4/Korridor/relea ... rridor.zip
+Windows Build : https://github.com/kobr4/Korridor/releases/download/1.0/Korridor.zip
 Source code here : https://github.com/kobr4/Korridor/tree/master/Korridor
 
 * Procedurally generated maze: so it looks different each time you run it.
-* OpenGL 3.0
+* OpenGL 3.0 (but OpenGL ES 2.0 friendly)
 * Should run very fast even on low-end PC
 * Xbox360 gamepad support
 
