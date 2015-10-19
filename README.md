@@ -22,10 +22,10 @@ Just run Korridor.exe with the Oculus Rift DK2 set as the main monitor.
 Currently this project only come with a solution file for Visual Studio 2012, compiled for 32bit x86 architecture.
 
 Needed environnement variables
-LIBOVR : Path to Oculus Rift SDK (only tested with 0.4.4)
-SDLPATH : Path to SDL 2.0 library
-SDLTTFPATH : Path to SDL 2.0 TTF
-GLEWPATH : Path to GLEW library
+* LIBOVR : Path to Oculus Rift SDK (only tested with 0.4.4)
+* SDLPATH : Path to SDL 2.0 library
+* SDLTTFPATH : Path to SDL 2.0 TTF
+* GLEWPATH : Path to GLEW library
 
 In order to compile the "Release" configuration, every dependecies should be linked statically in order to produce a stand-alone executable: 
 * GLEW should be compiled as static library and be named glew32s.lib
