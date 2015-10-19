@@ -1,6 +1,6 @@
-## Korridor
+# Korridor
 
-# Summary
+## Summary
 
 Oculus Rift VR Maze Demo
 
@@ -14,10 +14,10 @@ Source code here : https://github.com/kobr4/Korridor/tree/master/Korridor
 * Should run very fast even on low-end PC
 * Xbox360 gamepad support
 
-# Instructions
+## Instructions
 Just run Korridor.exe with the Oculus Rift DK2 set as the main monitor.
 
-# Compilation
+## Compilation
 
 Currently this project only come with a solution file for Visual Studio 2012, compiled for 32bit x86 architecture.
 
@@ -27,7 +27,7 @@ SDLPATH : Path to SDL 2.0 library
 SDLTTFPATH : Path to SDL 2.0 TTF
 GLEWPATH : Path to GLEW library
 
-In order to compile the "Release" configuration, every dependecies should be linked statically in order to produce a stand-alone exe: 
+In order to compile the "Release" configuration, every dependecies should be linked statically in order to produce a stand-alone executable: 
 * GLEW should be compiled as static library and be named glew32s.lib
 * SDL 2.0 should be compiled as static library and be named "SDL2s.lib","SDL2_mains.lib", "SDL2_TTFs.lib"
 * you additionnaly need the Windows version of UPX (Ultimate Packer for eXecutables). 
