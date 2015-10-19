@@ -1,5 +1,7 @@
 # Korridor
 
+![Alt text](http://www.nicolasmy.com/blog/upload/fbDrawing.png "Optional title")
+
 ## Summary
 
 Oculus Rift VR Maze Demo
