@@ -70,6 +70,12 @@
  %(AdditionalOptions)</AdditionalOptions>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PostBuildEvent>
+      <Command>"$(UPXPATH)\upx.exe" "$(SolutionDir)$(Configuration)\$(ProjectName).exe"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Exe compression with UPX</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BufferData.cpp" />
