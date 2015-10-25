@@ -15,12 +15,12 @@ private :
 	Sprite * sprite;
 	FrameBuffer * backFb;
 public :
-	FrameBuffer(int width,int height) {
+	FrameBuffer(int width,int height, int textureId = 0) {
 		this->width = width;
 		this->height = height;
 		this->fb = 0;
 		this->depthRb = 0;
-		this->renderTex = 0;
+		this->renderTex = textureId;
 		this->sprite = NULL;
 		this->backFb = NULL;
 	}

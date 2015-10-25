@@ -50,6 +50,7 @@
 
 #define OVR
 #define OVR_OS_WIN32
+#define OVR07
 /*
 #ifdef WIN32
 #define OVR_OS_WIN32
@@ -62,8 +63,27 @@
 #endif
 */
 #include <windows.h>
+
 #include <OVR_CAPI.h>
+
+//#include <Kernel/OVR_System.h>
+#include <OVR_CAPI_0_7_0.h>
 #include <OVR_CAPI_GL.h>
+
+
+#define ovrHmd_SetEnabledCaps ovr_SetEnabledCaps
+#define ovrHmd_GetTrackingState ovr_GetTrackingState
+#define ovrHmd_GetHSWDisplayState ovr_GetHSWDisplayState
+#define ovrHmd_GetHmdPosePerEye ovr_GetHmdPosePerEye
+#define ovrHmd_GetFovTextureSize ovr_GetFovTextureSize
+#define ovrHmd_EndFrame ovr_EndFrame
+#define ovrHmd_DismissHSWDisplay ovr_DismissHSWDisplay
+//#define ovrHmd_CreateDebug ovr_CreateDebug
+#define ovrHmd_Create ovr_Create
+#define ovrHmd_ConfigureTracking ovr_ConfigureTracking
+#define ovrHmd_ConfigureRendering ovr_ConfigureRendering
+#define ovrHmd_BeginFrame ovr_BeginFrame
+#define ovrHmd_AttachToWindow ovr_AttachToWindow
 
 float Renderer::hudScale = 0.68f;
 float Renderer::ipd = 0.5f;
@@ -103,17 +123,25 @@ Renderable * sphereRenderable;
 Shader * g_shader_debug;
 float * g_vertexBuffer = NULL;
 
-static int fb_width, fb_height;
-static unsigned int fbo, fb_tex, fb_depth;
-static int fb_tex_width, fb_tex_height;
-
 static ovrHmd hmd;
+static ovrHmdDesc hmdDesc;
 static ovrSizei eyeres[2];
 static ovrEyeRenderDesc eye_rdesc[2];
 static ovrGLTexture fb_ovr_tex[2];
-static union ovrGLConfig glcfg;
+//static union ovrGLConfig glcfg;
 static unsigned int distort_caps;
 static unsigned int hmd_caps;
+
+
+ovrGLTexture  * mirrorTexture = nullptr;
+ovrTexture * 	outMirrorTexture;
+//ovrTexture  * mirrorTexture;
+GLuint          mirrorFBO = 0;
+ovrEyeRenderDesc EyeRenderDesc[2]; 
+ovrRecti viewPort;
+ovrSwapTextureSet * textureSet;
+
+
 
 SDL_Joystick * g_joystick = NULL; // on crée le joystick
 bool g_collision_detection = true;
@@ -227,8 +255,10 @@ static int AsyncInitThread(void *ptr)
 
 void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fullscreen)
 {
+	//ovrInitParams  params;
+
 	/* libovr must be initialized before we create the OpenGL context */
-    ovr_Initialize();
+    ovr_Initialize(NULL);
 
 	this->screenHeight = screenHeight;
 	this->screenWidth = screenWidth;
@@ -246,8 +276,6 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
     g_joystick = SDL_JoystickOpen(0);
 
     atexit(SDL_Quit);
-
-     //SDL_Init(SDL_INIT_VIDEO);
 
     // Version d'OpenGL
       
@@ -281,6 +309,9 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 		puts("ERROR : unable to initialize font library");
 		exit(1);
 	}
+
+	// GLEW Initialisation
+	glewInit();
 
 
 	SDL_RWops* fontdataptr = SDL_RWFromConstMem(test,sizeof(test));
@@ -321,6 +352,7 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	Texture * textSurfaceTexture = new Texture(this->screenWidth,this->screenHeight,(unsigned char*)this->textSurface->pixels);
 	this->spriteTextSurface = new Sprite(textSurfaceTexture,(float)this->screenWidth,(float)this->screenHeight,0,1,1,0);
 	this->fbDrawing = NULL;
+	this->fbDrawing2 = NULL;
 	this->fbHalfRes = NULL;
 
 	g_shader_debug = new Shader();
@@ -347,77 +379,77 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 
 	OutputConsole::setRenderer(this);
 
- 	if(!(hmd = ovrHmd_Create(0))) {
+#ifndef OVR07
+
+ 	if(!(hmd = ovrHmd_Create(&hmd))) {
     		fprintf(stderr, "failed to open Oculus HMD, falling back to virtual debug HMD\n");
+			exit(0);
+			
     		if(!(hmd = ovrHmd_CreateDebug(ovrHmd_DK2))) {
     			fprintf(stderr, "failed to create virtual debug HMD\n");
     			exit(0);
     		}
    }
+#else
+	
+	ovrGraphicsLuid luid;
+	ovrResult result = ovrHmd_Create(&hmd,&luid);
+	if (!OVR_SUCCESS(result)) {
+		puts("Failed to create HMD context.");
+		exit(0);
+	}
+	hmdDesc = ovr_GetHmdDesc (hmd);
+	
+#endif
 
 /* resize our window to match the HMD resolution */
-   SDL_SetWindowSize(displayWindow, hmd->Resolution.w, hmd->Resolution.h);
-   SDL_SetWindowPosition(displayWindow, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-   int win_width = hmd->Resolution.w;
-   int win_height = hmd->Resolution.h;
+  // SDL_SetWindowSize(displayWindow, hmdDesc.Resolution.w, hmdDesc.Resolution.h);
+  // SDL_SetWindowPosition(displayWindow, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+  // int win_width = hmdDesc.Resolution.w;
+   //int win_height = hmdDesc.Resolution.h;
     
    /* enable position and rotation tracking */
-   ovrHmd_ConfigureTracking(hmd, ovrTrackingCap_Orientation | ovrTrackingCap_MagYawCorrection | ovrTrackingCap_Position, 0);
+  //ovrHmd_ConfigureTracking(hmd, ovrTrackingCap_Orientation | ovrTrackingCap_MagYawCorrection | ovrTrackingCap_Position, 0);
    /* retrieve the optimal render target resolution for each eye */
-   eyeres[0] = ovrHmd_GetFovTextureSize(hmd, ovrEye_Left, hmd->DefaultEyeFov[0], 1.0);
-   eyeres[1] = ovrHmd_GetFovTextureSize(hmd, ovrEye_Right, hmd->DefaultEyeFov[1], 1.0);
+   //eyeres[0] = ovrHmd_GetFovTextureSize(hmd, ovrEye_Left, hmdDesc.DefaultEyeFov[0], 1.0);
+   //eyeres[1] = ovrHmd_GetFovTextureSize(hmd, ovrEye_Right, hmdDesc.DefaultEyeFov[1], 1.0);
         
    /* fill in the ovrGLTexture structures that describe our render target texture */
    for(int i=0; i<2; i++) {
-    		fb_ovr_tex[i].OGL.Header.API = ovrRenderAPI_OpenGL;
-    		fb_ovr_tex[i].OGL.Header.TextureSize.w = screenWidth;
-    		fb_ovr_tex[i].OGL.Header.TextureSize.h = screenHeight;
+    	fb_ovr_tex[i].OGL.Header.API = ovrRenderAPI_OpenGL;
+    	fb_ovr_tex[i].OGL.Header.TextureSize.w = screenWidth;
+    	fb_ovr_tex[i].OGL.Header.TextureSize.h = screenHeight;
     		/* this next field is the only one that differs between the two eyes */
-			fb_ovr_tex[i].OGL.Header.RenderViewport.Pos.x = i == 0 ? 0 : screenWidth / 2;
+#ifndef OVR07
+			fb_ovr_tex[i].OGL.Header.TextureSize.RenderViewport.Pos.x = i == 0 ? 0 : screenWidth / 2;
     		fb_ovr_tex[i].OGL.Header.RenderViewport.Pos.y = 0;
     		fb_ovr_tex[i].OGL.Header.RenderViewport.Size.w = screenWidth / 2;
     		fb_ovr_tex[i].OGL.Header.RenderViewport.Size.h = screenHeight;
-    		fb_ovr_tex[i].OGL.TexId = fb_tex;	/* both eyes will use the same texture id */
+#else
+			//fb_ovr_tex[i].OGL.Header.Pos.x = i == 0 ? 0 : screenWidth / 2;
+    		//fb_ovr_tex[i].OGL.Header.RenderViewport.Pos.y = 0;
+    		//fb_ovr_tex[i].OGL.Header.RenderViewport.Size.w = screenWidth / 2;
+    		//fb_ovr_tex[i].OGL.Header.RenderViewport.Size.h = screenHeight;
+#endif
+    		fb_ovr_tex[i].OGL.TexId = 0;	/* both eyes will use the same texture id */
+
     	}
     
    /* fill in the ovrGLConfig structure needed by the SDK to draw our stereo pair
 	* to the actual HMD display (SDK-distortion mode)
 	*/
-   memset(&glcfg, 0, sizeof glcfg);
-   glcfg.OGL.Header.API = ovrRenderAPI_OpenGL;
-   glcfg.OGL.Header.BackBufferSize = hmd->Resolution;
-   glcfg.OGL.Header.Multisample = 1;
-   /* 
-   #ifdef WIN32
-   157 	glcfg.OGL.Window = GetActiveWindow();
-   158 	glcfg.OGL.DC = wglGetCurrentDC();
-   159 #else
-   160 	glcfg.OGL.Disp = glXGetCurrentDisplay();
-   161 	glcfg.OGL.Win = glXGetCurrentDrawable();
-   162 #endif
-   */
-   if(hmd->HmdCaps & ovrHmdCap_ExtendDesktop) {
+   /*
+   if(hmdDesc.HmdCaps & ovrHmdCap_ExtendDesktop) {
     		printf("running in \"extended desktop\" mode\n");
     	} else {
-    		/* to sucessfully draw to the HMD display in "direct-hmd" mode, we have to
-    		 * call ovrHmd_AttachToWindow
-    		 * XXX: this doesn't work properly yet due to bugs in the oculus 0.4.1 sdk/driver
-    		 */
 			ovrHmd_AttachToWindow(hmd, glcfg.OGL.Window, 0, 0);
-			/*
-   #ifdef WIN32
-    		ovrHmd_AttachToWindow(hmd, glcfg.OGL.Window, 0, 0);
-   #else
-    		ovrHmd_AttachToWindow(hmd, (void*)glcfg.OGL.Win, 0, 0);
-   #endif
-    		printf("running in \"direct-hmd\" mode\n");
-			*/
     }
-    
+    */
+#ifndef OVR07
 	/* enable low-persistence display and dynamic prediction for lattency compensation */
 	hmd_caps = ovrHmdCap_LowPersistence | ovrHmdCap_DynamicPrediction;
 	ovrHmd_SetEnabledCaps(hmd, hmd_caps);
-    
+
     /* configure SDK-rendering and enable chromatic abberation correction, vignetting, and
     	* timewrap, which shifts the image before drawing to counter any lattency between the call
     	* to ovrHmd_GetEyePose and ovrHmd_EndFrame.
@@ -428,12 +460,12 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
     		fprintf(stderr, "failed to configure distortion renderer\n");
 			exit(0);
    }
-    
+#endif    
 	// Start the sensor which provides the Rift’s pose and motion.
 	ovrHmd_ConfigureTracking(hmd, ovrTrackingCap_Orientation |
 		ovrTrackingCap_MagYawCorrection |
 		ovrTrackingCap_Position, 0);
-
+		
 
 
 	UIHeader * headWidget = new UIHeader();
@@ -501,6 +533,55 @@ void Renderer::init(unsigned int screenWidth, unsigned int screenHeight, bool fu
 	headWidget->addChild(header2);
 
 	UIWidget::currentWidget = headWidget;
+	
+	
+#ifdef OVR07
+    // Make eye render buffers
+	/*
+    for (int eye = 0; eye < 2; ++eye)
+    {
+        ovrSizei idealTextureSize = ovr_GetFovTextureSize(hmd, ovrEyeType(eye), hmdDesc.DefaultEyeFov[eye], 1);
+        eyeRenderTexture[eye] = new TextureBuffer(hmd, true, true, idealTextureSize, 1, NULL, 1);
+        eyeDepthBuffer[eye]   = new DepthBuffer(eyeRenderTexture[eye]->GetSize(), 0);
+
+        if (!eyeRenderTexture[eye]->TextureSet)
+        {
+            puts("Failed to create texture.");
+			exit(0);
+        }
+    }
+	*/
+	
+    // Create mirror texture and an FBO used to copy mirror texture to back buffer
+    result = ovr_CreateMirrorTextureGL(hmd, GL_SRGB8_ALPHA8, this->screenWidth, this->screenHeight, reinterpret_cast<ovrTexture**>(&mirrorTexture));
+    if (!OVR_SUCCESS(result))
+    {
+		puts("failed to create mirror texture");
+		exit(0);
+    }
+    
+	// Configure the mirror read buffer
+	glGenFramebuffers(1, &mirrorFBO);
+	if (mirrorFBO == 0) {
+		puts("failed to create glGenFramebuffers");
+		exit(0);	
+	}
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, mirrorFBO);
+	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ((ovrGLTexture*)mirrorTexture)->OGL.TexId, 0);
+    glFramebufferRenderbuffer(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, 0);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	
+    EyeRenderDesc[0] = ovr_GetRenderDesc(hmd, ovrEye_Left, hmdDesc.DefaultEyeFov[0]);
+    EyeRenderDesc[1] = ovr_GetRenderDesc(hmd, ovrEye_Right, hmdDesc.DefaultEyeFov[1]);	
+
+    //ovrResult result2 = ovr_CreateSwapTextureSetGL(hmd, GL_SRGB8_ALPHA8, this->screenWidth, this->screenHeight, &textureSet);
+	ovrResult result2 = ovr_CreateSwapTextureSetGL(hmd,GL_RGBA, this->screenWidth, this->screenHeight, &textureSet);
+    if(!OVR_SUCCESS(result2)){
+		puts("ovr_CreateSwapTextureSetGL ERROR");
+		exit(0);
+	}
+
+#endif
 	asyncInitThread = SDL_CreateThread(AsyncInitThread, "AsyncInitThread", (void *)this);
 }
 
@@ -611,18 +692,26 @@ void Renderer::drawMessage(const char * message,RendererTextAlign hAlign,Rendere
 	
 }
 
+void swapFBdrawing(FrameBuffer **fb1, FrameBuffer **fb2) {
+	FrameBuffer * fbtmp;
+	fbtmp = *fb1;
+	*fb1 = *fb2;
+	*fb2 = fbtmp; 
+}
+
 void Renderer::draw()
 {
 	// Remove warning message
+	/*
 	ovrHSWDisplayState hswDisplayState;
 	ovrHmd_GetHSWDisplayState(hmd, &hswDisplayState);
 	if (hswDisplayState.Displayed) {
 		ovrHmd_DismissHSWDisplay(hmd);
 	}
-
+	*/
 	/* the drawing starts with a call to ovrHmd_BeginFrame */
 #ifdef OVR
-   ovrHmd_BeginFrame(hmd, 0);
+   //ovrHmd_BeginFrame(hmd, 0);
 #endif
 
 	SDL_FillRect(this->textSurface, NULL, 0x000000);
@@ -632,9 +721,19 @@ void Renderer::draw()
 		this->fbHalfRes->do_register();
 	}
 
-	if (this->fbDrawing == NULL){ 
+	if (this->fbDrawing == NULL){
+		#ifdef OVR
+		this->fbDrawing = new FrameBuffer(this->screenWidth,this->screenHeight,((ovrGLTexture*)&textureSet->Textures[0])->OGL.TexId);
+		this->fbDrawing2 = new FrameBuffer(this->screenWidth,this->screenHeight,((ovrGLTexture*)&textureSet->Textures[1])->OGL.TexId);
+		//this->fbDrawing2->do_register();
+		#else
 		this->fbDrawing = new FrameBuffer(this->screenWidth,this->screenHeight);
-		this->fbDrawing->do_register();
+		#endif
+
+
+
+
+		//this->fbDrawing->do_register();
 		#ifdef OVR
 		for(int i=0; i<2; i++) {
 			fb_ovr_tex[i].OGL.TexId = this->fbDrawing->getTextureId();	/* both eyes will use the same texture id */
@@ -642,7 +741,9 @@ void Renderer::draw()
 		#endif
 	}
 	
-	this->fbDrawing->bind();
+
+
+		this->fbDrawing->bind();
 	//OpenGL setup
 	if (g_cullface) {
 		glEnable(GL_CULL_FACE);
@@ -656,9 +757,16 @@ void Renderer::draw()
 
 	#ifdef OVR
 	ovrPosef headPose[2];
+	
+	
+	
+	// Get eye poses, feeding in correct IPD offset
+	ovrVector3f ViewOffset[2] = { EyeRenderDesc[0].HmdToEyeViewOffset,EyeRenderDesc[1].HmdToEyeViewOffset };
 
-	// Query the HMD for the current tracking state.
-	ovrTrackingState ts = ovrHmd_GetTrackingState(hmd, ovr_GetTimeInSeconds());
+    ovrFrameTiming   ftiming = ovr_GetFrameTiming(hmd, 0);
+	//ovrTrackingState ts = ovrHmd_GetTrackingState(hmd, ovr_GetTimeInSeconds());
+	ovrTrackingState ts = ovrHmd_GetTrackingState(hmd, ftiming.DisplayMidpointSeconds);
+	ovr_CalcEyePoses(ts.HeadPose.ThePose, ViewOffset, headPose);
 	if (ts.StatusFlags & (ovrStatus_OrientationTracked | ovrStatus_PositionTracked))
 	{
 		ovrPoseStatef pose = ts.HeadPose;
@@ -833,14 +941,20 @@ void Renderer::draw()
 
 
 	#ifdef OVR
+
+	#ifndef OVR07
 	ovrEyeType eye = hmd->EyeRenderOrder[eyeid];
 	headPose[eyeid] = ovrHmd_GetHmdPosePerEye(hmd, eye);
+	#endif
 	#endif
 	
 	}
 
 	this->fbDrawing->unbind(screenWidth,screenHeight);
+	
 
+
+	#ifndef OVR
 	this->shaderTexturing->bind();
 	this->shaderTexturing->setProjectionMatrixToOrtho(this->screenWidth,this->screenHeight);
 	this->shaderTexturing->setModelViewMatrixToIdentity();
@@ -848,13 +962,88 @@ void Renderer::draw()
 	this->fbDrawing->draw(screenWidth,screenHeight);
 	this->shaderTexturing->unbind();
 
-	#ifndef OVR
 	SDL_GL_SwapWindow(displayWindow);
 	#endif
 
 #ifdef OVR
-	ovrHmd_EndFrame(hmd, headPose, &fb_ovr_tex[0].Texture);
+	
+
+	
+	
+#ifdef OVR07
+
+    // Do distortion rendering, Present and flush/sync
+
+    // Set up positional data.
+    ovrViewScaleDesc viewScaleDesc;
+    viewScaleDesc.HmdSpaceToWorldScaleInMeters = 1.0f;
+    viewScaleDesc.HmdToEyeViewOffset[0] = ViewOffset[0];
+    viewScaleDesc.HmdToEyeViewOffset[1] = ViewOffset[1];
+
+    ovrLayerEyeFov ld;
+	static int i = 0;
+    //ld.Header.Type  =  i++%2 == 0 ?  ovrLayerType_EyeFov : ovrLayerType_Disabled ;
+	ld.Header.Type  = ovrLayerType_EyeFov;
+    ld.Header.Flags = ovrLayerFlag_TextureOriginAtBottomLeft;   // Because OpenGL.
+
+	//textureSet->CurrentIndex = 0;
+	//textureSet->TextureCount = 1;
+	//textureSet->Textures[0].Header.API = ovrRenderAPI_OpenGL;
+	// reinterpret_cast<ovrGLTexture**>(&textureSet->Textures[0]);
+	//ovrGLTexture mytexture = (ovrGLTexture*)(textureSet->Textures[0]);
+	//ovrGLTexture* tex = (ovrGLTexture*)&textureSet->Textures[0];
+	//tex->OGL.TexId = this->fbDrawing->getTextureId();
+	
+	//tex->OGL.Header.API = ovrRenderAPI_OpenGL;
+    //tex->OGL.Header.TextureSize.w = screenWidth;
+    //tex->OGL.Header.TextureSize.h = screenHeight;
+
+
+    for (int eye = 0; eye < 2; ++eye)
+    {
+		viewPort.Pos.x = eye == 0 ? 0 : screenWidth / 2;
+		viewPort.Pos.y = 0;
+		viewPort.Size.w = screenWidth / 2;
+		viewPort.Size.h = screenHeight;
+
+        ld.ColorTexture[eye] = textureSet;
+        ld.Viewport[eye]     = viewPort;
+        ld.Fov[eye]          = hmdDesc.DefaultEyeFov[eye];
+        ld.RenderPose[eye]   = headPose[eye];
+		
+    }
+
+
+    ovrLayerHeader* layers = &ld.Header;
+	//puts("ovr_SubmitFrame");
+
+	ovrResult result = ovr_SubmitFrame(hmd, 0, NULL,&layers, 1);
+    if (!OVR_SUCCESS(result)) {
+		puts("ovr_SubmitFrame ERROR");
+		exit(0);
+	}
+#else   
+
+	//ovrHmd_EndFrame(hmd, headPose, &fb_ovr_tex[0].Texture);
 #endif
+#endif
+#ifdef OVR07
+    // Blit mirror texture to back buffer
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, mirrorFBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    GLint w = ((ovrGLTexture*)mirrorTexture)->OGL.Header.TextureSize.w;
+    GLint h = ((ovrGLTexture*)mirrorTexture)->OGL.Header.TextureSize.h;
+    glBlitFramebuffer(0, h, w, 0,
+                        0, 0, w, h,
+                        GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	
+	SDL_GL_SwapWindow(displayWindow);
+
+	//Set the next texture in the set to be the render target.
+	textureSet->CurrentIndex = (textureSet->CurrentIndex + 1) % textureSet->TextureCount; 
+	swapFBdrawing(&this->fbDrawing, &this->fbDrawing2);
+#endif	
 }
 
 void Renderer::loop()

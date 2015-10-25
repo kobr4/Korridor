@@ -84,6 +84,7 @@ private :
 	unsigned int frameCounter;
 	//UIWidget * headWidget;
 	FrameBuffer * fbDrawing;
+	FrameBuffer * fbDrawing2;
 	FrameBuffer * fbHalfRes;
 
 	Shader * shaderTexturing;

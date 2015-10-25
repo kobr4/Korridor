@@ -17,12 +17,14 @@ void FrameBuffer::bind(){
 	glViewport(0, 0, width, height);
 	glBindFramebuffer(GL_FRAMEBUFFER, fb);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTex, 0);
+	//glBindRenderbuffer(GL_RENDERBUFFER, this->depthRb);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRb);	
 
 	// check status
 	int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (status != GL_FRAMEBUFFER_COMPLETE)
 	{
+		printf("FrameBuffer::bind() ERROR renderTex=%d\n",renderTex);
 		exit(0);
 	}
 }
@@ -33,19 +35,21 @@ void FrameBuffer::unbind(int screenWidth, int screenHeight){
 }
 
 void FrameBuffer::do_register(){
-		glewInit();
 		glGenFramebuffers(1, &this->fb);
 		glGenRenderbuffers(1, &this->depthRb);
 		glBindRenderbuffer(GL_RENDERBUFFER, this->depthRb);
-		glGenTextures(1, &this->renderTex);
-		glBindTexture(GL_TEXTURE_2D, this->renderTex);
+		if (this->renderTex == 0) {
+			glGenTextures(1, &this->renderTex);
+			glBindTexture(GL_TEXTURE_2D, this->renderTex);
+			pixels = (unsigned char *)calloc(sizeof(char),4 * width * height);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		} else {
+			glBindTexture(GL_TEXTURE_2D, this->renderTex);
+		}
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-
-		pixels = (unsigned char *)calloc(sizeof(char),4 * width * height);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
 		glBindRenderbuffer(GL_RENDERBUFFER, this->depthRb);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, this->width, this->height);	
@@ -54,6 +58,7 @@ void FrameBuffer::do_register(){
 		int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		if (status != GL_FRAMEBUFFER_COMPLETE)
 		{
+			puts("FrameBuffer::do_register()");
 			exit(0);
 		}
 }
